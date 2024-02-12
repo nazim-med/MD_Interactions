@@ -10,10 +10,11 @@ from plip.exchange.report import BindingSiteReport
 from scipy.spatial.distance import euclidean, rogerstanimoto, minkowski, cityblock
 
 from .utils import analyse_pi, add_chains, rm_model_tag, int_fp_matrix, int_fp_traj
-from .figures import save_pymol, plot_HPI, plot_HB, plot_PC, plot_PS, plot_SB, draw_interaction_Graph
+from .figures import save_pymol, plot_HPI, plot_HB, plot_PC, plot_PS, plot_SB, draw_interaction_Graph, plot_interaction_presence
+import logging
 
 config.NOHYDRO = True
-config.SILENT = True
+config.DEFAULT_LOG_LEVEL = logging.ERROR
 config.PISTACK_OFFSET_MAX = 4.0
 config.PISTACK_ANG_DEV = 45
 
@@ -77,25 +78,24 @@ def plip_analysis(pdb_file, bsid, outdir, save_files=False, pymol=False):
         for k in keys
     }
 
-    try:
-        hp_df = pd.DataFrame(interactions["hydrophobic"][1:], columns=interactions["hydrophobic"][0])
-        hb_df = []
-        for hb in my_interactions.all_hbonds_pdon + my_interactions.all_hbonds_ldon:
-            hb_interactions = []
-            for k in hbkeys:
-                hb_interactions.append(getattr(hb, k))
+    hp_df = pd.DataFrame(interactions["hydrophobic"][1:], columns=interactions["hydrophobic"][0])
+    hb_df = []
+    for hb in my_interactions.all_hbonds_pdon + my_interactions.all_hbonds_ldon:
+        hb_interactions = []
+        for k in hbkeys:
+            hb_interactions.append(getattr(hb, k))
 
-            hb_df.append(np.array(hb_interactions))
-
+        hb_df.append(np.array(hb_interactions))
+    if len(hb_df) != 0:
         hb_df = pd.DataFrame(np.stack(hb_df), columns=hbkeys)
         hb_df["h"] = [x.idx for x in hb_df["h"]]
-        ps_df = pd.DataFrame(interactions["pistacking"][1:], columns=interactions["pistacking"][0])
-        pc_df = pd.DataFrame(interactions["pication"][1:], columns=interactions["pication"][0])
-        sb_df = pd.DataFrame(interactions["saltbridge"][1:], columns=interactions["saltbridge"][0])
+    else:
+        hb_df = pd.DataFrame()
+    ps_df = pd.DataFrame(interactions["pistacking"][1:], columns=interactions["pistacking"][0])
+    pc_df = pd.DataFrame(interactions["pication"][1:], columns=interactions["pication"][0])
+    sb_df = pd.DataFrame(interactions["saltbridge"][1:], columns=interactions["saltbridge"][0])
 
-        return my_mol, hp_df, hb_df, ps_df, pc_df, sb_df 
-    except:
-        return my_mol
+    return my_mol, hp_df, hb_df, ps_df, pc_df, sb_df 
 
 def load_traj(traj, top, stride=1, start=0, rmres=None):
     t = md.load(traj, top=top, stride=stride)
@@ -111,23 +111,24 @@ def load_traj(traj, top, stride=1, start=0, rmres=None):
 
     return t, topology
 
-def cluster_traj(t, thresh, min_clust, max_clust, save_files=True, outdir="clusters"):
+def cluster_traj(t, min_clust=1, max_clust=100, thresh=0.25,  save_files=True, nsample=None, outdir="clusters"):
     if not os.path.isdir(outdir):
         os.mkdir(outdir)
     distances = np.empty((t.n_frames, t.n_frames))
     for i in range(t.n_frames):
-        if i%100 == 0:
-            print(str(i)+" of %i frames processed" % t.n_frames)
         distances[i] = md.rmsd(t, t, i)
 
     print('Max pairwise rmsd: %f nm' % np.max(distances))
 
     #Save cluster summary and bar chart
 
-    clust = AgglomerativeClustering(distance_threshold=thresh, n_clusters=None, affinity="precomputed", linkage="average")
+    if nsample is not None:
+        clust = AgglomerativeClustering(n_clusters=nsample, metric="precomputed", linkage="average")
+    else:
+        clust = AgglomerativeClustering(distance_threshold=thresh, n_clusters=None, metric="precomputed", linkage="average")
     assignments = clust.fit_predict(distances)
 
-    if len(np.unique(assignments)) > max_clust or len(np.unique(assignments)) <= min_clust:
+    if (len(np.unique(assignments)) > max_clust or len(np.unique(assignments)) <= min_clust) and nsample is None:
         raise ValueError("Unacceptable number of clusters obtained ({}), should be between {}–{}. If this is an acceptable value, please increase --max_clust or decrease --min_clust arguments. If not, try adjusting the clustering threshold (--thresh)".format(len(np.unique(assignments)), max_clust, min_clust))
     
     if save_files:
@@ -135,24 +136,20 @@ def cluster_traj(t, thresh, min_clust, max_clust, save_files=True, outdir="clust
         with open("summary.txt", "w") as f:
             f.write(summary)
 
-    XY = np.array([np.arange(len(assignments)), assignments]).T
+        XY = np.array([np.arange(len(assignments)), assignments]).T
 
-    for i in range(len(np.unique(assignments))):
-        index = np.where(assignments == i)[0]
-        plt.bar(XY[index,0], 1, label=str(i))
-    plt.legend(loc="upper right")
+        for i in range(len(np.unique(assignments))):
+            index = np.where(assignments == i)[0]
+            plt.bar(XY[index,0], 1, label=str(i))
+        plt.legend(loc="upper right")
+        plt.savefig("./clusters.png")
 
-    if save_files:
-        plt.savefig("clusters.png")
-    else:
-        plt.show()
 
     #Calculate and save central structure of clusters
 
     centroids = []
 
     for j in range(len(np.unique(assignments))):
-        print("Calculating centroid of cluster ",str(j+1),"of ",str(len(np.unique(assignments))))
         distances_0 = distances[:,np.where(assignments == j)[0]]
         distances_0 = distances_0[np.where(assignments == j)[0]]
         beta = 1
@@ -162,9 +159,9 @@ def cluster_traj(t, thresh, min_clust, max_clust, save_files=True, outdir="clust
     centroids = [centroids[i]+min(np.where(assignments == i)[0]) for i in range(len(centroids))]
 
     for i in range(len(centroids)):
-        filename = "clusters/cluster_"+str(i)+".pdb"
+        filename = "{}/cluster_{}.pdb".format(outdir,i)
         t[centroids[i]].save_pdb(filename)
-
+        add_chains(filename)
     return assignments, centroids
 
 def random_sampling(t, nsample, outdir):
@@ -175,7 +172,7 @@ def random_sampling(t, nsample, outdir):
         t[frame].save_pdb("{}/frame_{}.pdb".format(outdir,frame))
 
     for filename in [x for x in os.listdir(outdir) if "pdb" in x]:
-        rm_model_tag("{}/{}".format(outdir,filename))
+        # rm_model_tag("{}/{}".format(outdir,filename))
         #### Add chain identifiers to pdb for use
         add_chains("{}/{}".format(outdir,filename))
 
@@ -234,7 +231,7 @@ class analysis():
         self.sample_dir = sample_dir
 
         tempmol = PDBComplex()
-        tempmol.load_pdb(sample_dir+"/"+[x for x in os.listdir(sample_dir)][0])
+        tempmol.load_pdb(sample_dir+"/"+[x for x in os.listdir(sample_dir) if "pdb" in x][0])
         self.bsids = [x for x in str(tempmol).split("\n")[1:]]
 
         # Initialize instance variables for each analysis type
@@ -460,8 +457,11 @@ class analysis():
         if self.hydrophobic.hp_dists is None:
             return None
         if save_files:
-            if not os.path.isdir(self.dirname+"/plots"):
-                os.mkdir(self.dirname+"/plots")
+            outpath = self.dirname+"/plots"
+            if not os.path.isdir(self.dirname):
+                os.mkdir(self.dirname)
+            if not os.path.isdir(outpath):
+                os.mkdir(outpath)
         
         plot_HPI(self.hydrophobic.hp_dists, self.dirname, plot_thresh, save_files)
                 
@@ -469,8 +469,11 @@ class analysis():
         if self.hbond.hb_dists is None:
             return None
         if save_files:
-            if not os.path.isdir(self.dirname+"/plots"):
-                os.mkdir(self.dirname+"/plots")
+            outpath = self.dirname+"/plots"
+            if not os.path.isdir(self.dirname):
+                os.mkdir(self.dirname)
+            if not os.path.isdir(outpath):
+                os.mkdir(outpath)
         
         plot_HB(self.hbond.hb_dists, self.hbond.hb_angles, self.dirname, plot_thresh, save_files)
                             
@@ -478,8 +481,11 @@ class analysis():
         if self.pi_stacking.ps_dists is None:
             return None
         if save_files:
-            if not os.path.isdir(self.dirname+"/plots"):
-                os.mkdir(self.dirname+"/plots")
+            outpath = self.dirname+"/plots"
+            if not os.path.isdir(self.dirname):
+                os.mkdir(self.dirname)
+            if not os.path.isdir(outpath):
+                os.mkdir(outpath)
         
         plot_PS(self.pi_stacking.ps_dists, self.pi_stacking.ps_offset, self.pi_stacking.ps_angles, self.dirname, plot_thresh,  save_files)
 
@@ -487,8 +493,11 @@ class analysis():
         if self.pi_cation.pc_dists is None:
             return None
         if save_files:
-            if not os.path.isdir(self.dirname+"/plots"):
-                os.mkdir(self.dirname+"/plots")
+            outpath = self.dirname+"/plots"
+            if not os.path.isdir(self.dirname):
+                os.mkdir(self.dirname)
+            if not os.path.isdir(outpath):
+                os.mkdir(outpath)
         
         plot_PC(self.pi_cation.pc_dists, self.dirname, plot_thresh,  save_files)
 
@@ -496,10 +505,25 @@ class analysis():
         if self.saltbridge.sb_dists is None:
             return None
         if save_files:
-            if not os.path.isdir(self.dirname+"/plots"):
-                os.mkdir(self.dirname+"/plots")
+            outpath = self.dirname+"/plots"
+            if not os.path.isdir(self.dirname):
+                os.mkdir(self.dirname)
+            if not os.path.isdir(outpath):
+                os.mkdir(outpath)
         
         plot_SB(self.saltbridge.sb_dists, self.dirname, plot_thresh,  save_files)
+
+    def plot_interaction_presence(self, plot_thresh=0.3, figsize=(6,8), save_files=True):
+        if save_files:
+            outpath = self.dirname+"/plots"
+            if not os.path.isdir(self.dirname):
+                os.mkdir(self.dirname)
+            if not os.path.isdir(outpath):
+                os.mkdir(outpath)
+
+        ifp = self.get_ifp_matrix(save_files=False)
+
+        plot_interaction_presence(ifp, self.dirname, self.bsid.split(":")[0], figsize, plot_thresh,  save_files)
 
     def get_ifp_matrix(self, save_files):
         '''
@@ -517,8 +541,11 @@ class analysis():
                     self.saltbridge.saltbridge_df, self.saltbridge.sb_presence)
         
         if save_files:
-            if not os.path.isdir(self.dirname+"/Interaction_analysis"):
-                os.mkdir(self.dirname+"/Interaction_analysis")         
+            outpath = self.dirname+"/Interaction_analysis"
+            if not os.path.isdir(self.dirname):
+                os.mkdir(self.dirname)
+            if not os.path.isdir(outpath):
+                os.mkdir(outpath)   
 
             int_df.to_csv(self.dirname+"/Interaction_analysis/IFP_matrix.csv")
 
@@ -545,17 +572,12 @@ class analysis():
         if save_files:
             if not os.path.isdir(self.dirname+"/Interaction_analysis"):
                 os.mkdir(self.dirname+"/Interaction_analysis")         
-
             int_df.to_csv(self.dirname+"/Interaction_analysis/IFP_traj.csv")
 
         return traj_fp
     
     def representative_frame(self, thresh, pymol=True, save_files=False, metric="euclidean", out_name="Representative"):
-        outpath = "{}/{}".format(self.dirname, out_name)
-        if not os.path.isdir(self.dirname):
-            os.mkdir(self.dirname)
-        if not os.path.isdir(outpath):
-            os.mkdir(outpath)
+
 
         if metric.lower() == "euclidean":
             dist_metric = euclidean
@@ -575,12 +597,20 @@ class analysis():
 
         traj_fp = int_fp_traj(int_df, thresh, fraction=False)
 
-        rep_frame = np.argmin([rogerstanimoto(traj_fp, x) for x in int_df.to_numpy()])
+        rep_frame = np.argmin([dist_metric(traj_fp, x) for x in int_df.to_numpy()])
 
         if save_files:
+            outpath = "{}/{}".format(self.dirname, out_name)
+            if not os.path.isdir(self.dirname):
+                os.mkdir(self.dirname)
+            if not os.path.isdir(outpath):
+                os.mkdir(outpath)
+
             filename = "frame_{}".format(rep_frame)
 
             self.t[rep_frame].save_pdb("{}/{}.pdb".format(outpath,filename))
+
+            add_chains("{}/{}.pdb".format(outpath,filename))
                 
             _, hp_df, hb_df, ps_df, pc_df, sb_df = plip_analysis("{}/{}.pdb".format(outpath,filename), self.bsid, outpath, save_files=save_files, pymol=pymol)
 
@@ -597,5 +627,12 @@ class analysis():
         return rep_frame    
     
     def plot_2D_interactions(self, plot_thresh=0.2, canvas_height=500, canvas_width=800, padding=40, save_png=False, out_name=None):
-        draw_interaction_Graph(self, plot_thresh, canvas_height, canvas_width, padding, save_png, out_name=None)
+
+        if save_png:
+            if not os.path.isdir(self.dirname):
+                os.mkdir(self.dirname)     
+            if not os.path.isdir(self.dirname+"/plots"):
+                os.mkdir(self.dirname+"/plots")         
+    
+        draw_interaction_Graph(self, plot_thresh, canvas_height, canvas_width, padding, save_png, out_name=self.dirname+"/plots/{}".format(out_name))
         

@@ -1,0 +1,5 @@
+resnr,restype,reschain,resnr_l,restype_l,reschain_l,sidechain,protisdon,d_orig_idx,a_orig_idx,h
+201,VAL,A,1,ERM,B,False,True,2627,5017,2628
+129,ASP,A,1,ERM,B,True,False,5002,1490,5041
+129,ASP,A,1,ERM,B,True,False,5002,1491,5041
+212,SER,A,1,ERM,B,False,False,4990,2820,5033

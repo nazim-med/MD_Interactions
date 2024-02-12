@@ -65,12 +65,15 @@ def main():
             else:
                 continue
 
+    print("Loading trajectory")
+
     t, topology = load_traj(args.traj, args.top, args.stride, args.start, args.rmres)
 
     # # Calculate distance matrix and cluster trajectories
 
     if sample:
         if args.sampling == "cluster":
+            print("Sampling by agglomerative clustering.\n")
             cluster_traj(t, args.thresh, args.min_clust, args.max_clust)
 
         else:
@@ -79,8 +82,7 @@ def main():
 
     ###Edit PDB files so PLIP won't return an error
 
-            
-    analyser = analysis(t, topology, "clusters", pymol=args.pymol)
+    analyser = analysis(t, topology, "clusters")
     bsids = analyser.bsids
 
     for my_id in [x for x in bsids if x.split(":")[0] not in ["ARN", "ASH", "GLH", "LYN", "HIE", "HIP"]]:
@@ -103,6 +105,8 @@ def main():
             analyser.plot_PS(plot_thresh=args.plot_thresh, save_files=True)
             analyser.plot_PC(plot_thresh=args.plot_thresh, save_files=True)
             analyser.plot_SB(plot_thresh=args.plot_thresh, save_files=True)
+            analyser.plot_interaction_presence(plot_thresh=args.plot_thresh, save_files=True)
+            analyser.plot_2D_interactions(plot_thresh=args.plot_thresh, save_png=True, out_name="{}_interactions.png".format(my_id.split(":")[0]))
             analyser.traj_ifp(save_files=True, thresh=args.plot_thresh, fraction=True)
     print("Done.")
 

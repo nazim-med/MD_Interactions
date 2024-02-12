@@ -9,7 +9,8 @@ setup(
         "pandas",
         "rdkit",
         "mdtraj",
-        "matplotlib"
+        "matplotlib",
+        "scikit-learn"
     ],
     entry_points={
         'console_scripts': [

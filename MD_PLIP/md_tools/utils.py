@@ -22,7 +22,7 @@ def rm_model_tag(top):
 
 def add_chains(top):
     filetype = top.split(".")[-1]
-    filename = top.split(".")[-2]
+    filename = top[:-len(filetype)-1]
 
     mol = [x for x in pybel.readfile(filetype,top)][0]
 
@@ -107,7 +107,7 @@ def int_fp_matrix(my_id, clust_dir,
 
     for i in range(len(pi_cation_df)):
         row =  pi_cation_df.iloc[i]
-        int_name = "{}{}_{}_PS".format(row["RESTYPE"],row["RESNR"],row["RESCHAIN"])
+        int_name = "{}{}_{}_PC".format(row["RESTYPE"],row["RESNR"],row["RESCHAIN"])
         if interaction_df.iloc[0][int_name]  == 0:
             row_ids = np.where(((pi_cation_df["RESTYPE"] == row["RESTYPE"])*(pi_cation_df["RESNR"] == row["RESNR"])*(pi_cation_df["RESCHAIN"] == row["RESCHAIN"])) == True)[0]
 

@@ -15,6 +15,10 @@ import os
 
 
 def save_pymol(my_mol, my_id, outdir):
+    '''
+    Save pymol session from MD snapshot. Needs a plip mol object, bsid and outdir.
+    Adapted from PLIP.
+    '''
     complex = VisualizerData(my_mol, my_id)
     vis = PyMOLVisualizer(complex)
     lig_members = complex.lig_members
@@ -62,7 +66,6 @@ def save_pymol(my_mol, my_id, outdir):
     cmd.deselect()
 
     vis.make_initial_selections()
-
     vis.show_hydrophobic()  # Hydrophobic Contacts
     vis.show_hbonds()  # Hydrogen Bonds
     vis.show_halogen()  # Halogen Bonds
@@ -108,9 +111,9 @@ def plot_HPI(hp_dists, dirname, plot_thresh, save_files=True):
             ax.axvline(np.mean(row*10), 0, 1, color="red")
 
             ax = fig.add_subplot(nrows,ncols,int((i%4+ncols*2+1)+12*np.floor(i/4)))
-            for index, condition in ((row < 0.4))[::2].items():
-                if condition:
-                    ax.axvline(x=index, color='black', linestyle='-', linewidth=0.5, alpha=0.7)
+            ax.eventplot(np.where(row < 0.4)[0], color='black', linewidth=0.8, alpha=0.7)
+            ax.set_yticks([])
+            ax.set_xlim(0,len(hp_dists))
             ax.text(0.95,0.1,"{:.2f}%".format((row < 0.4).sum()*100/len(row)),backgroundcolor="white", transform=ax.transAxes, horizontalalignment='right')
             ax.set_title("HPI Presence")
             ax.set_xlabel("Frame")
@@ -149,9 +152,9 @@ def plot_HB(hb_dists,hb_angles, dirname, plot_thresh, save_files):
             ax.axhline(np.mean(row_ang), 0, 1, color="red")
 
             ax = fig.add_subplot(nrows,ncols,int((i%4+ncols*2+1)+12*np.floor(i/4)))
-            for index, condition in ((row < 0.25) & (row_ang > 120))[::2].items():
-                if condition:
-                    ax.axvline(x=index, color='black', linestyle='-', linewidth=0.5, alpha=0.7)
+            ax.eventplot(np.where(((row < 0.25) & (row_ang > 120)) == True)[0], color='black', linewidth=0.8, alpha=0.7)
+            ax.set_yticks([])
+            ax.set_xlim(0,len(hb_dists))
             ax.text(0.95,0.1,"{:.2f}%".format(((row < 0.25)*(row_ang > 120)).sum()*100/len(row)),backgroundcolor="white", transform=ax.transAxes, horizontalalignment='right')
             ax.set_title("HB Presence")
             ax.set_xlabel("Frame")
@@ -195,17 +198,10 @@ def plot_PS(ps_dists, ps_offset, ps_angles, dirname, plot_thresh, save_files):
         
         ax = fig.add_subplot(2,2,4)
         ax.set_title("Pi Stacking Present")
-        for index, condition in ((distance < 0.55)*(angles < 45)*(offset < 0.2))[::2].items():
-            if index == 0:
-                ax.axvline(0,0,0, color='red', linestyle='-', linewidth=0.5, alpha=0.7, label="parallel")
-            if condition:
-                ax.axvline(x=index, color='red', linestyle='-', linewidth=0.5, alpha=0.7)
-
-        for index, condition in ((distance < 0.55)*(angles >= 45)*(offset < 0.2))[::2].items():
-            if index == 0:
-                ax.axvline(0,0,0, color='blue', linestyle='-', linewidth=0.5, alpha=0.7, label="t-shaped")
-            if condition:
-                ax.axvline(x=index, color='blue', linestyle='-', linewidth=0.5, alpha=0.7)
+        ax.eventplot(np.where(((distance < 0.55)*(angles < 45)*(offset < 0.2)) == True)[0], color='red', linewidth=0.8, alpha=0.7, label="Parallel")
+        ax.eventplot(np.where(((distance < 0.55)*(angles >= 45)*(offset < 0.2)) == True)[0], color='blue', linewidth=0.8, alpha=0.7, label="T-shaped")
+        ax.set_yticks([])
+        ax.set_xlim(0,len(ps_dists))
 
         ax.legend(loc="upper right")
         ax.text(0.95,0.1,"Total Pi stacking: {:.2f}%".format(((distance < 0.55)*(offset < 0.2)).sum()*100/len(distance)),backgroundcolor="white", transform=ax.transAxes, horizontalalignment='right')
@@ -244,9 +240,9 @@ def plot_PC(pc_dists, dirname, plot_thresh, save_files):
             ax.axvline(np.mean(row*10), 0, 1, color="red")
 
             ax = fig.add_subplot(nrows,ncols,int((i%4+ncols*2+1)+12*np.floor(i/4)))
-            for index, condition in ((row < 0.6))[::2].items():
-                if condition:
-                    ax.axvline(x=index, color='black', linestyle='-', linewidth=0.2, alpha=0.7)
+            ax.eventplot(np.where(row < 0.6)[0], color='black', linewidth=0.8, alpha=0.7)
+            ax.set_yticks([])
+            ax.set_xlim(0,len(pc_dists))
             ax.text(0.95,0.1,"{:.2f}%".format((row < 0.6).sum()*100/len(row)),backgroundcolor="white", transform=ax.transAxes, horizontalalignment='right')
             ax.set_title("PC Presence")
             ax.set_xlabel("Frame")
@@ -284,9 +280,9 @@ def plot_SB(sb_dists, dirname, plot_thresh, save_files):
             ax.axvline(np.mean(row*10), 0, 1, color="red")
 
             ax = fig.add_subplot(nrows,ncols,int((i%4+ncols*2+1)+12*np.floor(i/4)))
-            for index, condition in ((row < 0.55))[::2].items():
-                if condition:
-                    ax.axvline(x=index, color='black', linestyle='-', linewidth=0.2, alpha=0.7)
+            ax.eventplot(np.where(row < 0.55)[0], color='black', linewidth=0.8, alpha=0.7)
+            ax.set_yticks([])
+            ax.set_xlim(0,len(sb_dists))
             ax.text(0.95,0.1,"{:.2f}%".format((row < 0.55).sum()*100/len(row)),backgroundcolor="white", transform=ax.transAxes, horizontalalignment='right')
             ax.set_title("SB Presence")
             ax.set_xlabel("Frame")
@@ -295,8 +291,35 @@ def plot_SB(sb_dists, dirname, plot_thresh, save_files):
         else:
             plt.show()
 
-def draw_interaction_Graph(self, plot_thresh=0, canvas_height=800, canvas_width=1000,  padding=40, save_png = False, out_name=None):
+def plot_interaction_presence(ifp, dirname, ligname, figsize=(6,8), plot_thresh=0.3, save_files=False):
 
+    ifp = ifp.iloc[:,np.where(ifp.sum(axis=0)/ifp.shape[0] > plot_thresh)[0]]
+
+    _, ax = plt.subplots(1,1,figsize=figsize)
+
+    for i in range(len(ifp.T)):
+        test = np.where(ifp.iloc[:,i] == 1)[0]
+        ax.eventplot(test, lineoffsets=i, linelengths = 0.7, linewidths=0.1, color="black", alpha=0.8)
+        ax.text(0,i,ifp.columns[i]+"  ", horizontalalignment="right", verticalalignment="center")
+        ax.text(len(ifp),i,"  {:.1f}%".format((len(test)/len(ifp))*100), horizontalalignment="left", verticalalignment="center")
+        ax.set_xlim(0,len(ifp))
+        ax.set_ylim(-0.5,len(ifp.T)-0.5)
+        ax.set_xlabel("Frame")
+        ax.set_yticks([])
+    ax.set_title("{} Non-Covalent Interactions".format(ligname), fontsize=15)
+
+    if save_files:
+        plt.savefig(dirname+"/plots/Interaction_presence.png", bbox_inches="tight")
+    else:
+        plt.show()
+
+def draw_interaction_Graph(self, plot_thresh=0, canvas_height=800, canvas_width=1000,  padding=40, save_png = False, out_name=None):
+    '''
+    Draws a molecular interaction graph from MD analysis using the Canvas drawing package.
+    If save_png, outputs the file as a png. If running in a jupyter notebook, the image is shown.
+    '''
+
+    ##### Outputs the ligand from trajectory. Uses openbabel to assign atom types then passes to RDKit to generate 2D coords ####
     with tempfile.TemporaryDirectory() as temp_dir:
         pdb_file_path = os.path.join(temp_dir, "lig.pdb")
 
@@ -306,8 +329,9 @@ def draw_interaction_Graph(self, plot_thresh=0, canvas_height=800, canvas_width=
         mol.write("pdb",pdb_file_path, overwrite=True)
 
         mol = Chem.MolFromPDBFile(pdb_file_path,removeHs=False)
+        os.remove(pdb_file_path)
     AllChem.EmbedMolecule(mol)
-    set_to_neutral_pH(mol)
+    set_to_neutral_pH(mol) #### Helper function to protonate/deprotonate groups. ####
 
     for atom in mol.GetAtoms():
         if atom.GetAtomicNum() == 1:
@@ -315,9 +339,8 @@ def draw_interaction_Graph(self, plot_thresh=0, canvas_height=800, canvas_width=
             if bound_atom.GetIdx == atom.GetIdx():
                 bound_atom = atom.GetBonds()[0].GetEndAtom()
 
-            if bound_atom.GetSymbol() in ["O","N","S"]:
-                atom.SetAtomicNum(100)
-
+            if bound_atom.GetSymbol() in ["O","N","S"]: #### Workaround so RDKit keeps explicit polar H's ####
+                atom.SetAtomicNum(100) 
 
     mol=Chem.RemoveHs(mol)
 
@@ -489,95 +512,95 @@ def draw_interaction_Graph(self, plot_thresh=0, canvas_height=800, canvas_width=
 
         # Set line style based on bond type
         if bond_type == "SINGLE":
-            ctx.set_source_rgb(0, 0, 0)  # Black color
-            ctx.set_line_width(2)  # Adjust line width for double bond
+            ctx.set_source_rgb(0, 0, 0)  
+            ctx.set_line_width(2)  
             ctx.move_to(start_x, start_y)
             ctx.line_to(end_x, end_y)
             ctx.stroke()
             ctx.set_line_width(0)
 
         elif bond_type == "DOUBLE":
-            ctx.set_source_rgb(0,0,0)  # White color
-            ctx.set_line_width(6)  # Adjust line width for double bond
+            ctx.set_source_rgb(0,0,0)  
+            ctx.set_line_width(6)  
             ctx.move_to(start_x, start_y)
             ctx.line_to(end_x, end_y)
             ctx.stroke()
-            ctx.set_source_rgb(1,1,1)  # Black color
-            ctx.set_line_width(2)  # Reset line width
+            ctx.set_source_rgb(1,1,1) 
+            ctx.set_line_width(2)  
             ctx.move_to(start_x, start_y)
             ctx.line_to(end_x, end_y)
             ctx.stroke()
             ctx.set_line_width(0)
 
         elif bond_type == "AROMATIC":
-            ctx.set_source_rgb(0,0,0)  # White color
-            ctx.set_line_width(6)  # Adjust line width for aromatic bond
-            ctx.set_dash([10, 5], 0)  # Set dash pattern for aromatic bond
+            ctx.set_source_rgb(0,0,0)  
+            ctx.set_line_width(6)  
+            ctx.set_dash([10, 5], 0)  
             ctx.move_to(start_x, start_y)
             ctx.line_to(end_x, end_y)
             ctx.stroke()
-            ctx.set_source_rgb(1,1,1)  # Black color
-            ctx.set_dash([], 0)  # Reset dash pattern
-            ctx.set_line_width(2)  # Reset line width
+            ctx.set_source_rgb(1,1,1)  
+            ctx.set_dash([], 0)  
+            ctx.set_line_width(2)  
             ctx.move_to(start_x, start_y)
             ctx.line_to(end_x, end_y)
             ctx.stroke()
             ctx.set_line_width(0)
 
         elif bond_type == "TRIPLE":
-            ctx.set_source_rgb(0,0,0)  # White color
-            ctx.set_line_width(10)  # Adjust line width for double bond
+            ctx.set_source_rgb(0,0,0)  
+            ctx.set_line_width(10)  
             ctx.move_to(start_x, start_y)
             ctx.line_to(end_x, end_y)
             ctx.stroke()
-            ctx.set_source_rgb(1,1,1)  # Black color
-            ctx.set_line_width(6)  # Reset line width
+            ctx.set_source_rgb(1,1,1)  
+            ctx.set_line_width(6)  
             ctx.move_to(start_x, start_y)
             ctx.line_to(end_x, end_y)
             ctx.stroke()
-            ctx.set_source_rgb(0,0,0)  # Black color
-            ctx.set_line_width(2)  # Reset line width
+            ctx.set_source_rgb(0,0,0)  
+            ctx.set_line_width(2)  
             ctx.move_to(start_x, start_y)
             ctx.line_to(end_x, end_y)
             ctx.stroke()
             ctx.set_line_width(0)
         
         elif bond_type == "HPI":
-            ctx.set_source_rgba(0.5,0.5,0.5, 0.5)  # Grey color
+            ctx.set_source_rgba(0.5,0.5,0.5, 0.5)  
             ctx.set_line_width(2) 
-            ctx.set_dash([10, 5], 0)  # Set dash pattern for aromatic bond
+            ctx.set_dash([10, 5], 0)  
             ctx.move_to(start_x+jitter, start_y)
             ctx.line_to(end_x, end_y)
             ctx.stroke()
             ctx.set_line_width(0)
         elif bond_type == "HB":
-            ctx.set_source_rgba(0, 0, 1, 0.5)  # Blue color
+            ctx.set_source_rgba(0, 0, 1, 0.5)  
             ctx.set_line_width(2) 
-            ctx.set_dash([10, 5], 0)  # Set dash pattern for aromatic bond
+            ctx.set_dash([10, 5], 0) 
             ctx.move_to(start_x+jitter, start_y)
             ctx.line_to(end_x, end_y)
             ctx.stroke()
             ctx.set_line_width(0)
         elif bond_type == "PS":
-            ctx.set_source_rgba(0, 0.6, 0, 0.5)  # Black color
+            ctx.set_source_rgba(0, 0.6, 0, 0.5)  
             ctx.set_line_width(2) 
-            ctx.set_dash([10, 5], 0)  # Set dash pattern for aromatic bond
+            ctx.set_dash([10, 5], 0)  
             ctx.move_to(start_x+jitter, start_y)
             ctx.line_to(end_x, end_y)
             ctx.stroke()
             ctx.set_line_width(0)
         elif bond_type == "PC":
-            ctx.set_source_rgba(1, 0.7, 0, 0.5)  # Black color
+            ctx.set_source_rgba(1, 0.7, 0, 0.5)  
             ctx.set_line_width(2) 
-            ctx.set_dash([10, 5], 0)  # Set dash pattern for aromatic bond
+            ctx.set_dash([10, 5], 0)  
             ctx.move_to(start_x+jitter, start_y)
             ctx.line_to(end_x, end_y)
             ctx.stroke()
             ctx.set_line_width(0)
         elif bond_type == "SB":
-            ctx.set_source_rgba(1, 0, 1, 0.5)  # Black color
+            ctx.set_source_rgba(1, 0, 1, 0.5)  
             ctx.set_line_width(2) 
-            ctx.set_dash([10, 5], 0)  # Set dash pattern for aromatic bond
+            ctx.set_dash([10, 5], 0)  
             ctx.move_to(start_x+jitter, start_y)
             ctx.line_to(end_x, end_y)
             ctx.stroke()
@@ -591,9 +614,9 @@ def draw_interaction_Graph(self, plot_thresh=0, canvas_height=800, canvas_width=
             continue
 
         # Draw a filled white circle at each data point
-        ctx.set_source_rgb(1, 1, 1)  # White color
+        ctx.set_source_rgb(1, 1, 1)  
         ctx.arc((x - min_x) * x_scale + padding, (y - min_y) * y_scale + padding, 7, 0, 2 * 3.14)
-        ctx.fill_preserve()  # Preserve the path for stroking
+        ctx.fill_preserve()  
         ctx.stroke()
             
         # Set text alignment to center
@@ -674,12 +697,12 @@ def draw_interaction_Graph(self, plot_thresh=0, canvas_height=800, canvas_width=
     # Save the image to a file
     if save_png:
         surface.write_to_png(out_name)
-
-    try:
-        from IPython.display import display, Image
-        import io
-        image_stream = io.BytesIO()
-        surface.write_to_png(image_stream)
-        display(Image(data=image_stream.getvalue(), format="png"))
-    except:
-        None
+    else:
+        try:
+            from IPython.display import display, Image
+            import io
+            image_stream = io.BytesIO()
+            surface.write_to_png(image_stream)
+            display(Image(data=image_stream.getvalue(), format="png"))
+        except:
+            None
