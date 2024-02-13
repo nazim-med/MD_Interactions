@@ -7,11 +7,11 @@ Aims of this project:
 * Produce a command line interface to MD analysis to automatically carry out the most useful analysis
 
 Implementation/ Workflow:
-* Trajectory i/o
-* Sampling of frames by random sampling or clustering
-* Analysis of non-covalent interaction by PLIP
-* Monitoring of detected interactions over the course of the simulation
-* Generation of useful plots
+1. Trajectory i/o
+2. Sampling of frames by random sampling or clustering
+3. Analysis of non-covalent interaction by PLIP
+4. Monitoring of detected interactions over the course of the simulation
+5. Generation of useful plots
 
 ## Installation
 1. Create environment and install dependencies
