@@ -8,6 +8,17 @@ from plip.basic.supplemental import vecangle, projection
 from openbabel import pybel
 from rdkit import Chem
 
+prot_dict = {
+            "ASH":"ASP",
+            "GLH":"GLU",
+            "LYN":"LYS",
+            "HIE":"HIS",
+            "HID":"HIS",
+            "HIP":"HIS",
+            "CYM":"CYS",
+            "CYX":"CYS",
+        }
+
 def rm_model_tag(top):
         with open(top) as f:
             lines = f.readlines()
@@ -20,22 +31,52 @@ def rm_model_tag(top):
         mol = [x for x in pybel.readfile("pdb",top)][0]
         mol.write("pdb",top, overwrite=True)
 
+#### Replaced with simple text editing - openbabel takes longer and breaks more
+
+# def add_chains(top):
+#     filetype = top.split(".")[-1]
+#     filename = top[:-len(filetype)-1]
+
+#     mol = [x for x in pybel.readfile(filetype,top)][0]
+
+#     chain_num = 1
+#     for i, res in enumerate(mol.residues):
+#         if res.OBResidue.GetName() in ["SOL","HOH","NA","CL"]:
+#             break
+#         if res.OBResidue.GetNum() < mol.residues[i-1].OBResidue.GetNum() and i != 0:
+#             chain_num += 1
+#             res = res.OBResidue.SetChainNum(chain_num)
+#         else:
+#             res = res.OBResidue.SetChainNum(chain_num)
+#     mol.write("pdb","./{}.pdb".format(filename), overwrite=True)
+
 def add_chains(top):
-    filetype = top.split(".")[-1]
-    filename = top[:-len(filetype)-1]
+    with open(top,"r") as f:
+        pdb = f.readlines()
 
-    mol = [x for x in pybel.readfile(filetype,top)][0]
+    alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-    chain_num = 1
-    for i, res in enumerate(mol.residues):
-        if res.OBResidue.GetName() in ["SOL","HOH","NA","CL"]:
-            break
-        if res.OBResidue.GetNum() < mol.residues[i-1].OBResidue.GetNum() and i != 0:
-            chain_num += 1
-            res = res.OBResidue.SetChainNum(chain_num)
+    chain_num = 0
+    for i,line in enumerate(pdb):
+        if line.find("ATOM") != -1 or line.find("HETATM") != -1:
+            if pdb[i-1].find("ATOM") != -1 or pdb[i-1].find("HETATM") != -1:
+                if int(line[22:26]) < int(pdb[i-1][22:26]):
+                    chain_num += 1
+                    pdb[i] = pdb[i][:21]+alphabet[chain_num]+pdb[i][22:]
+                else:
+                    pdb[i] = pdb[i][:21]+alphabet[chain_num]+pdb[i][22:]
+            else:
+                pdb[i] = pdb[i][:21]+alphabet[chain_num]+pdb[i][22:]
         else:
-            res = res.OBResidue.SetChainNum(chain_num)
-    mol.write("pdb","./{}.pdb".format(filename), overwrite=True)
+            continue
+
+    #### Deal with Amber Protonated Residue Names Otherwise PLIP does not detect interactions
+    if line[17:20] in prot_dict.keys():
+        pdb[i] = pdb[i][:17]+prot_dict[line[17:20]]+pdb[i][20:]
+
+    with open(top, "w") as f:
+        for line in pdb:
+            f.writelines(line)
 
 
 def analyse_pi(plane_1, plane_2):

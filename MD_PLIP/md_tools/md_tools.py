@@ -15,8 +15,13 @@ import logging
 
 config.NOHYDRO = True
 config.DEFAULT_LOG_LEVEL = logging.ERROR
+
+### Loosen detection thresholds to detect more interactions
 config.PISTACK_OFFSET_MAX = 4.0
 config.PISTACK_ANG_DEV = 45
+config.HBOND_DIST_MAX = 5.0
+config.HYDROPH_DIST_MAX = 4.5
+
 
 keys = (
     "hydrophobic",

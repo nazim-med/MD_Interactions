@@ -74,7 +74,7 @@ def main():
     if sample:
         if args.sampling == "cluster":
             print("Sampling by agglomerative clustering.\n")
-            cluster_traj(t, args.thresh, args.min_clust, args.max_clust)
+            cluster_traj(t, args.thresh, args.min_clust, args.max_clust, nsample=args.nsample)
 
         else:
             print("Sampling {} frames by random sampling.\n".format(args.nsample))
