@@ -99,7 +99,7 @@ def main():
         if user_input == "n": continue
 
         else:
-            analyser.analyse_bsid(my_id, save_files=True, pymol=True)
+            analyser.analyse_bsid(my_id, save_files=False, pymol=True)
             analyser.plot_HPI(plot_thresh=args.plot_thresh, save_files=True)
             analyser.plot_HB(plot_thresh=args.plot_thresh, save_files=True)
             analyser.plot_PS(plot_thresh=args.plot_thresh, save_files=True)
@@ -108,6 +108,8 @@ def main():
             analyser.plot_interaction_presence(plot_thresh=args.plot_thresh, save_files=True)
             analyser.plot_2D_interactions(plot_thresh=args.plot_thresh, save_png=True, out_name="{}_interactions.png".format(my_id.split(":")[0]))
             analyser.traj_ifp(save_files=True, thresh=args.plot_thresh, fraction=True)
+            analyser.representative_frame(thresh=0.3, pymol=True, save_files=True, metric="tanimoto")
+
     print("Done.")
 
 if __name__ =="__main__":
