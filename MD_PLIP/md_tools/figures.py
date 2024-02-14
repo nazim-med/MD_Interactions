@@ -292,14 +292,14 @@ def plot_SB(sb_dists, dirname, plot_thresh, save_files):
             plt.show()
 
 def plot_interaction_presence(ifp, dirname, ligname, figsize=(6,8), plot_thresh=0.3, save_files=False):
-
+    
     ifp = ifp.iloc[:,np.where(ifp.sum(axis=0)/ifp.shape[0] > plot_thresh)[0]]
 
     _, ax = plt.subplots(1,1,figsize=figsize)
 
     for i in range(len(ifp.T)):
         test = np.where(ifp.iloc[:,i] == 1)[0]
-        ax.eventplot(test, lineoffsets=i, linelengths = 0.7, linewidths=0.1, color="black", alpha=0.8)
+        ax.eventplot(test, lineoffsets=i, linelengths = 0.7, linewidths=figsize[0]/15, color="black", alpha=0.9)
         ax.text(0,i,ifp.columns[i]+"  ", horizontalalignment="right", verticalalignment="center")
         ax.text(len(ifp),i,"  {:.1f}%".format((len(test)/len(ifp))*100), horizontalalignment="left", verticalalignment="center")
         ax.set_xlim(0,len(ifp))
@@ -318,6 +318,15 @@ def draw_interaction_Graph(self, plot_thresh=0, canvas_height=800, canvas_width=
     Draws a molecular interaction graph from MD analysis using the Canvas drawing package.
     If save_png, outputs the file as a png. If running in a jupyter notebook, the image is shown.
     '''
+
+    if canvas_height <= 800:
+        sgl_witdh = 2
+        dbl_width = 6
+
+    else:
+        sgl_witdh = 3
+        dbl_width = 8
+
 
     ##### Outputs the ligand from trajectory. Uses openbabel to assign atom types then passes to RDKit to generate 2D coords ####
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -421,37 +430,29 @@ def draw_interaction_Graph(self, plot_thresh=0, canvas_height=800, canvas_width=
     res_info = []
     for res in used_res:
         res_ints = [x[0] for x in interactions if x[1] == res]
-        com = np.array([coord_dict[x] for x in res_ints]).mean(axis=0)-np.array([x_center, y_center])
-        _com = com
-        min_dist = np.min(np.sqrt(((np.array([np.array(coord_dict[key]) for key in coord_dict.keys()])-com)**2).sum(axis=1)))
-        while min_dist < 3.5:
-            com = com + (0.05*_com)
-            min_dist = np.min(np.sqrt(((np.array([np.array(coord_dict[key]) for key in coord_dict.keys()])-com)**2).sum(axis=1)))
-        res_info.append((com[0],com[1],"residue",res))
+        lab_coords = np.array([coord_dict[x] for x in res_ints]).mean(axis=0)
 
-        
-    # Sort the label coordinates by y-value
-    res_info = sorted(res_info, key=lambda x: x[1])
+        dists = np.sqrt(((np.array([np.array(coord_dict[key]) for key in coord_dict.keys()])-lab_coords)**2).sum(axis=1))
+        min_dist = min(dists)
+        while True:
+            if min_dist != 0:
+                mod_vec = lab_coords - coord_dict[list(coord_dict.keys())[np.argmin(dists)]]
+                mod_vec = (mod_vec/np.linalg.norm(mod_vec)) + (np.random.randn(1,2)/100).ravel()  ####  normalise vector to move away from closest point. Add random factors to avoid getting caught in a loop
+            else:
+                min2 = np.partition(dists, 2)[2]
+                new_argmin = np.where(dists == min2)[0][0]
+                mod_vec = lab_coords - coord_dict[list(coord_dict.keys())[new_argmin]]
+                mod_vec = (mod_vec/np.linalg.norm(mod_vec)) + (np.random.randn(1,2)/100).ravel() ####  normalise vector to move away from closest point. Add random factors to avoid getting caught in a loop
+                
+            lab_coords = lab_coords + mod_vec
+            dists = np.sqrt(((np.array([np.array(coord_dict[key]) for key in coord_dict.keys()])-lab_coords)**2).sum(axis=1))
+            min_dist = min(dists)
 
-    # Ensure minimum spacing of 2.5 units between labels
-    min_spacing = 2.0
+            if min_dist >= 1.5:
+                break
+        coord_dict[res] = (lab_coords[0],lab_coords[1])
+        res_info.append((lab_coords[0],lab_coords[1],"residue",res))
 
-    for i in range(len(res_info)):
-        current_x, current_y, label_type, label_name = res_info[i]
-        
-        # Check spacing between current label and the previous ones
-        for j in range(len(res_info)):
-            prev_x, prev_y, prev_type, prev_label = res_info[j]
-            if abs(current_y - prev_y) < min_spacing and abs(current_x - prev_x) < 5 and j != i:
-                if current_y > prev_y:
-                    current_y = prev_y + min_spacing
-                    res_info[i] = (current_x, current_y, label_type, label_name)
-                else:
-                    prev_y = current_y+min_spacing
-                    res_info[j] = (prev_x, prev_y, prev_type, prev_label)
-
-        # Update the y-value
-        res_info[i] = (current_x, current_y, label_type, label_name)
 
     atom_info = atom_info + centroids
     lines = []
@@ -490,13 +491,24 @@ def draw_interaction_Graph(self, plot_thresh=0, canvas_height=800, canvas_width=
 
     # Draw a simple graph with labels and bond types
     data_points = atom_info
-    # connections = bonds  # Format: (start_index, end_index, bond_type)
 
     # Calculate scaling factors to fit within the canvas
     min_x, min_y = min(point[0] for point in data_points), min(point[1] for point in data_points)
     max_x, max_y = max(point[0] for point in data_points), max(point[1] for point in data_points)
 
-    x_scale = y_scale = min((canvas_width - 2 * padding) / (max_x - min_x), (canvas_height - 2 * padding) / (max_y - min_y))
+    x_scale = y_scale = min((canvas_width - 2.5 * padding) / (max_x - min_x), (canvas_height - 2.5 * padding) / (max_y - min_y))
+
+    # Calculate modifying factors to center molecule on canvas
+
+    canvc_x = canvas_width/2
+    canvc_y = canvas_height/2
+
+    cent_x, cent_y = np.array([x[:2] for x in data_points]).mean(axis=0)
+    cent_x = (cent_x - min_x) * x_scale + padding
+    cent_y = (cent_y - min_y) * y_scale + padding
+
+    mod_x = canvc_x - cent_x
+    mod_y = canvc_y - cent_y
 
     # Draw connections with different line styles based on bond type
     for start, end, bond_type in connections:
@@ -505,15 +517,15 @@ def draw_interaction_Graph(self, plot_thresh=0, canvas_height=800, canvas_width=
         jitter = np.random.uniform(-10,10)
 
         # Apply scaling and padding to coordinates
-        start_x = (start_x - min_x) * x_scale + padding
-        start_y = (start_y - min_y) * y_scale + padding
-        end_x = (end_x - min_x) * x_scale + padding
-        end_y = (end_y - min_y) * y_scale + padding
+        start_x = (start_x - min_x) * x_scale + padding + mod_x
+        start_y = (start_y - min_y) * y_scale + padding + mod_y     
+        end_x = (end_x - min_x) * x_scale + padding + mod_x
+        end_y = (end_y - min_y) * y_scale + padding + mod_y
 
         # Set line style based on bond type
         if bond_type == "SINGLE":
             ctx.set_source_rgb(0, 0, 0)  
-            ctx.set_line_width(2)  
+            ctx.set_line_width(sgl_witdh)  
             ctx.move_to(start_x, start_y)
             ctx.line_to(end_x, end_y)
             ctx.stroke()
@@ -521,7 +533,7 @@ def draw_interaction_Graph(self, plot_thresh=0, canvas_height=800, canvas_width=
 
         elif bond_type == "DOUBLE":
             ctx.set_source_rgb(0,0,0)  
-            ctx.set_line_width(6)  
+            ctx.set_line_width(dbl_width)  
             ctx.move_to(start_x, start_y)
             ctx.line_to(end_x, end_y)
             ctx.stroke()
@@ -534,7 +546,7 @@ def draw_interaction_Graph(self, plot_thresh=0, canvas_height=800, canvas_width=
 
         elif bond_type == "AROMATIC":
             ctx.set_source_rgb(0,0,0)  
-            ctx.set_line_width(6)  
+            ctx.set_line_width(dbl_width)  
             ctx.set_dash([10, 5], 0)  
             ctx.move_to(start_x, start_y)
             ctx.line_to(end_x, end_y)
@@ -566,40 +578,40 @@ def draw_interaction_Graph(self, plot_thresh=0, canvas_height=800, canvas_width=
             ctx.set_line_width(0)
         
         elif bond_type == "HPI":
-            ctx.set_source_rgba(0.5,0.5,0.5, 0.5)  
-            ctx.set_line_width(2) 
+            ctx.set_source_rgba(0.5,0.5,0.5, 0.7)  
+            ctx.set_line_width(3) 
             ctx.set_dash([10, 5], 0)  
             ctx.move_to(start_x+jitter, start_y)
             ctx.line_to(end_x, end_y)
             ctx.stroke()
             ctx.set_line_width(0)
         elif bond_type == "HB":
-            ctx.set_source_rgba(0, 0, 1, 0.5)  
-            ctx.set_line_width(2) 
+            ctx.set_source_rgba(0, 0, 1, 0.7)  
+            ctx.set_line_width(3) 
             ctx.set_dash([10, 5], 0) 
             ctx.move_to(start_x+jitter, start_y)
             ctx.line_to(end_x, end_y)
             ctx.stroke()
             ctx.set_line_width(0)
         elif bond_type == "PS":
-            ctx.set_source_rgba(0, 0.6, 0, 0.5)  
-            ctx.set_line_width(2) 
+            ctx.set_source_rgba(0, 0.6, 0, 0.7)  
+            ctx.set_line_width(3) 
             ctx.set_dash([10, 5], 0)  
             ctx.move_to(start_x+jitter, start_y)
             ctx.line_to(end_x, end_y)
             ctx.stroke()
             ctx.set_line_width(0)
         elif bond_type == "PC":
-            ctx.set_source_rgba(1, 0.7, 0, 0.5)  
-            ctx.set_line_width(2) 
+            ctx.set_source_rgba(1, 0.7, 0, 0.7)  
+            ctx.set_line_width(3) 
             ctx.set_dash([10, 5], 0)  
             ctx.move_to(start_x+jitter, start_y)
             ctx.line_to(end_x, end_y)
             ctx.stroke()
             ctx.set_line_width(0)
         elif bond_type == "SB":
-            ctx.set_source_rgba(1, 0, 1, 0.5)  
-            ctx.set_line_width(2) 
+            ctx.set_source_rgba(1, 0, 1, 0.7)  
+            ctx.set_line_width(3) 
             ctx.set_dash([10, 5], 0)  
             ctx.move_to(start_x+jitter, start_y)
             ctx.line_to(end_x, end_y)
@@ -615,13 +627,13 @@ def draw_interaction_Graph(self, plot_thresh=0, canvas_height=800, canvas_width=
 
         # Draw a filled white circle at each data point
         ctx.set_source_rgb(1, 1, 1)  
-        ctx.arc((x - min_x) * x_scale + padding, (y - min_y) * y_scale + padding, 7, 0, 2 * 3.14)
+        ctx.arc((x - min_x) * x_scale + padding + mod_x, (y - min_y) * y_scale + padding + mod_y, 10, 0, 2 * 3.14)
         ctx.fill_preserve()  
         ctx.stroke()
             
-        # Set text alignment to center
+        # Set font settings
         ctx.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
-        ctx.set_font_size(12)
+        ctx.set_font_size(15)
 
         # Calculate text width and height
         text_extents = ctx.text_extents(res if label == "residue" else label)
@@ -629,8 +641,8 @@ def draw_interaction_Graph(self, plot_thresh=0, canvas_height=800, canvas_width=
         text_height = text_extents[3]
 
         # Position text at the center of the point with padding
-        text_x = (x - min_x) * x_scale + padding - text_width / 2
-        text_y = (y - min_y) * y_scale + padding + text_height / 2
+        text_x = (x - min_x) * x_scale + padding + mod_x - text_width / 2
+        text_y = (y - min_y) * y_scale + padding + mod_y + text_height / 2
         ctx.move_to(text_x, text_y)
 
         if label == "residue":
@@ -640,16 +652,15 @@ def draw_interaction_Graph(self, plot_thresh=0, canvas_height=800, canvas_width=
             ctx.fill()
         
         if label in ["O","N","S","P","B"]:
+            ctx.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
             color = color_dict[label]
             ctx.set_source_rgba(color[0],color[1],color[2],1)
-
         else:
             ctx.set_source_rgba(0, 0, 0, 1)
         ctx.move_to(text_x, text_y)
         ctx.text_path(res if label == "residue" else label)
         ctx.fill()
 
-    legend_x, legend_y = padding, canvas_height - padding
 
     # Define legend items
     legend_items = [
@@ -660,9 +671,11 @@ def draw_interaction_Graph(self, plot_thresh=0, canvas_height=800, canvas_width=
         ("Salt-bridge", (1,0,1)),
     ]
 
+
     # Calculate legend size
-    legend_width = 150
-    legend_height = len(legend_items) * 20
+    legend_width = np.sum([40+len(x[0])*9 for x in legend_items])
+    legend_height = 20
+    legend_x, legend_y = (canvas_width - legend_width)/2 , canvas_height - padding/3
 
     # Draw legend rectangle
     ctx.set_source_rgb(0,0,0)  # Black color
@@ -677,8 +690,8 @@ def draw_interaction_Graph(self, plot_thresh=0, canvas_height=800, canvas_width=
     # Draw legend items
     for label, color in legend_items:
         ctx.set_line_width(2)
-        ctx.set_source_rgba(color[0], color[1], color[2],0.8)  # Black color
-        ctx.set_dash([10, 5], 0)  # Set dash pattern for aromatic bond
+        ctx.set_source_rgba(color[0], color[1], color[2],0.8)  
+        ctx.set_dash([10, 5], 0)  
 
 
         # Draw legend line
@@ -692,7 +705,7 @@ def draw_interaction_Graph(self, plot_thresh=0, canvas_height=800, canvas_width=
         ctx.show_text(label)
 
         # Move down for the next legend item
-        legend_y -= 20
+        legend_x += 40+len(label)*9
 
     # Save the image to a file
     if save_png:
