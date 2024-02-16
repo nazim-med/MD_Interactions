@@ -71,8 +71,8 @@ def add_chains(top):
             continue
 
     #### Deal with Amber Protonated Residue Names Otherwise PLIP does not detect interactions
-    if line[17:20] in prot_dict.keys():
-        pdb[i] = pdb[i][:17]+prot_dict[line[17:20]]+pdb[i][20:]
+        if line[17:20] in prot_dict.keys():
+            pdb[i] = pdb[i][:17]+prot_dict[line[17:20]]+pdb[i][20:]
 
     with open(top, "w") as f:
         for line in pdb:
