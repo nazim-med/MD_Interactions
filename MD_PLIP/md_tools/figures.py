@@ -122,9 +122,9 @@ def plot_HPI(hp_dists, dirname, plot_thresh, save_files=True):
         else:
             plt.show()
 
-def plot_HB(hb_dists,hb_angles, dirname, plot_thresh, save_files):
+def plot_HB(hb_dists,hb_angles, dirname, plot_thresh, save_files, HB_dist_max, HB_ang_min):
 
-    presence = pd.DataFrame(((hb_dists < 0.25) & (hb_angles > 120)).sum(axis=0)/len(hb_dists), index = hb_dists.columns, columns=["Presence"]).sort_values("Presence", ascending=False)
+    presence = pd.DataFrame(((hb_dists < HB_dist_max) & (hb_angles > HB_ang_min)).sum(axis=0)/len(hb_dists), index = hb_dists.columns, columns=["Presence"]).sort_values("Presence", ascending=False)
     presence = presence.iloc[np.where(presence.Presence > plot_thresh)[0]]
     hb_dists=hb_dists[presence.index]
     hb_angles=hb_angles[presence.index]
@@ -152,10 +152,10 @@ def plot_HB(hb_dists,hb_angles, dirname, plot_thresh, save_files):
             ax.axhline(np.mean(row_ang), 0, 1, color="red")
 
             ax = fig.add_subplot(nrows,ncols,int((i%4+ncols*2+1)+12*np.floor(i/4)))
-            ax.eventplot(np.where(((row < 0.25) & (row_ang > 120)) == True)[0], color='black', linewidth=0.8, alpha=0.7)
+            ax.eventplot(np.where(((row < HB_dist_max) & (row_ang > HB_ang_min)) == True)[0], color='black', linewidth=0.8, alpha=0.7)
             ax.set_yticks([])
             ax.set_xlim(0,len(hb_dists))
-            ax.text(0.95,0.1,"{:.2f}%".format(((row < 0.25)*(row_ang > 120)).sum()*100/len(row)),backgroundcolor="white", transform=ax.transAxes, horizontalalignment='right')
+            ax.text(0.95,0.1,"{:.2f}%".format(((row < HB_dist_max)*(row_ang > HB_ang_min)).sum()*100/len(row)),backgroundcolor="white", transform=ax.transAxes, horizontalalignment='right')
             ax.set_title("HB Presence")
             ax.set_xlabel("Frame")
         if save_files:
@@ -163,9 +163,9 @@ def plot_HB(hb_dists,hb_angles, dirname, plot_thresh, save_files):
         else:
             plt.show()
 
-def plot_PS(ps_dists, ps_offset, ps_angles, dirname, plot_thresh, save_files):
+def plot_PS(ps_dists, ps_offset, ps_angles, dirname, plot_thresh, save_files, PS_dist_max, PS_offset_max):
 
-    presence = pd.DataFrame(((ps_dists < 0.55) & (ps_offset < 0.2)).sum(axis=0)/len(ps_dists), index = ps_dists.columns, columns=["Presence"]).sort_values("Presence", ascending=False)
+    presence = pd.DataFrame(((ps_dists < PS_dist_max) & (ps_offset < PS_offset_max)).sum(axis=0)/len(ps_dists), index = ps_dists.columns, columns=["Presence"]).sort_values("Presence", ascending=False)
     presence = presence.iloc[np.where(presence.Presence > plot_thresh)[0]]
     ps_dists=ps_dists[presence.index]
     ps_offset=ps_offset[presence.index]
@@ -198,22 +198,22 @@ def plot_PS(ps_dists, ps_offset, ps_angles, dirname, plot_thresh, save_files):
         
         ax = fig.add_subplot(2,2,4)
         ax.set_title("Pi Stacking Present")
-        ax.eventplot(np.where(((distance < 0.55)*(angles < 45)*(offset < 0.2)) == True)[0], color='red', linewidth=0.8, alpha=0.7, label="Parallel")
-        ax.eventplot(np.where(((distance < 0.55)*(angles >= 45)*(offset < 0.2)) == True)[0], color='blue', linewidth=0.8, alpha=0.7, label="T-shaped")
+        ax.eventplot(np.where(((distance < PS_dist_max)*(angles < 45)*(offset < PS_offset_max)) == True)[0], color='red', linewidth=0.8, alpha=0.7, label="Parallel")
+        ax.eventplot(np.where(((distance < PS_dist_max)*(angles >= 45)*(offset < PS_offset_max)) == True)[0], color='blue', linewidth=0.8, alpha=0.7, label="T-shaped")
         ax.set_yticks([])
         ax.set_xlim(0,len(ps_dists))
 
         ax.legend(loc="upper right")
-        ax.text(0.95,0.1,"Total Pi stacking: {:.2f}%".format(((distance < 0.55)*(offset < 0.2)).sum()*100/len(distance)),backgroundcolor="white", transform=ax.transAxes, horizontalalignment='right')
+        ax.text(0.95,0.1,"Total Pi stacking: {:.2f}%".format(((distance < PS_dist_max)*(offset < PS_offset_max)).sum()*100/len(distance)),backgroundcolor="white", transform=ax.transAxes, horizontalalignment='right')
         fig.suptitle(ps_dists.columns[i], fontsize=15)
         if save_files:
             plt.savefig(dirname+"/plots/PS_plot_{}.png".format(i))
         else:
             plt.show()
 
-def plot_PC(pc_dists, dirname, plot_thresh, save_files):
+def plot_PC(pc_dists, dirname, plot_thresh, save_files, PC_dist_max):
 
-    presence = pd.DataFrame((pc_dists < 0.6).sum(axis=0)/len(pc_dists), index = pc_dists.columns, columns=["Presence"]).sort_values("Presence", ascending=False)
+    presence = pd.DataFrame((pc_dists < PC_dist_max).sum(axis=0)/len(pc_dists), index = pc_dists.columns, columns=["Presence"]).sort_values("Presence", ascending=False)
     presence = presence.iloc[np.where(presence.Presence > plot_thresh)[0]]
     pc_dists=pc_dists[presence.index]
 
@@ -240,10 +240,10 @@ def plot_PC(pc_dists, dirname, plot_thresh, save_files):
             ax.axvline(np.mean(row*10), 0, 1, color="red")
 
             ax = fig.add_subplot(nrows,ncols,int((i%4+ncols*2+1)+12*np.floor(i/4)))
-            ax.eventplot(np.where(row < 0.6)[0], color='black', linewidth=0.8, alpha=0.7)
+            ax.eventplot(np.where(row < PC_dist_max)[0], color='black', linewidth=0.8, alpha=0.7)
             ax.set_yticks([])
             ax.set_xlim(0,len(pc_dists))
-            ax.text(0.95,0.1,"{:.2f}%".format((row < 0.6).sum()*100/len(row)),backgroundcolor="white", transform=ax.transAxes, horizontalalignment='right')
+            ax.text(0.95,0.1,"{:.2f}%".format((row < PC_dist_max).sum()*100/len(row)),backgroundcolor="white", transform=ax.transAxes, horizontalalignment='right')
             ax.set_title("PC Presence")
             ax.set_xlabel("Frame")
         if save_files:
@@ -251,9 +251,9 @@ def plot_PC(pc_dists, dirname, plot_thresh, save_files):
         else:
             plt.show()
 
-def plot_SB(sb_dists, dirname, plot_thresh, save_files):
+def plot_SB(sb_dists, dirname, plot_thresh, save_files, SB_dist_max):
 
-    presence = pd.DataFrame((sb_dists < 0.55).sum(axis=0)/len(sb_dists), index = sb_dists.columns, columns=["Presence"]).sort_values("Presence", ascending=False)
+    presence = pd.DataFrame((sb_dists < SB_dist_max).sum(axis=0)/len(sb_dists), index = sb_dists.columns, columns=["Presence"]).sort_values("Presence", ascending=False)
     presence = presence.iloc[np.where(presence.Presence > plot_thresh)[0]]
     sb_dists=sb_dists[presence.index]
     
@@ -280,10 +280,10 @@ def plot_SB(sb_dists, dirname, plot_thresh, save_files):
             ax.axvline(np.mean(row*10), 0, 1, color="red")
 
             ax = fig.add_subplot(nrows,ncols,int((i%4+ncols*2+1)+12*np.floor(i/4)))
-            ax.eventplot(np.where(row < 0.55)[0], color='black', linewidth=0.8, alpha=0.7)
+            ax.eventplot(np.where(row < SB_dist_max)[0], color='black', linewidth=0.8, alpha=0.7)
             ax.set_yticks([])
             ax.set_xlim(0,len(sb_dists))
-            ax.text(0.95,0.1,"{:.2f}%".format((row < 0.55).sum()*100/len(row)),backgroundcolor="white", transform=ax.transAxes, horizontalalignment='right')
+            ax.text(0.95,0.1,"{:.2f}%".format((row < SB_dist_max).sum()*100/len(row)),backgroundcolor="white", transform=ax.transAxes, horizontalalignment='right')
             ax.set_title("SB Presence")
             ax.set_xlabel("Frame")
         if save_files:
@@ -313,26 +313,83 @@ def plot_interaction_presence(ifp, dirname, ligname, figsize=(6,8), plot_thresh=
     else:
         plt.show()
 
-def draw_interaction_Graph(self, plot_thresh=0, canvas_height=800, canvas_width=1000,  padding=40, save_png = False, out_name=None):
+def _get_interactions(analyser, plot_thresh, coord_dict):
+    interactions = []
+    centroids = []
+    centroid_counter = 0
+
+    for i,row in analyser.hydrophobic.hydrophobic_df.drop_duplicates(subset=["LIGCARBONIDX","RESTYPE","RESNR","RESCHAIN"]).iterrows():
+        if row["fpresent"] < plot_thresh:
+            continue
+        int_atom = str(analyser.topology.atom(row["LIGCARBONIDX"]-1)).split("-")[-1]
+        interactions.append((int_atom, row["RESTYPE"]+str(row["RESNR"])+"_"+row["RESCHAIN"], "HPI"))#, presence_df[int_name]))
+
+    for i,row in analyser.hbond.hbond_df.iterrows():
+        if row["fpresent"] < plot_thresh:
+            continue
+        if row["protisdon"]:
+            int_atom = str(analyser.topology.atom(row["a_orig_idx"]-1)).split("-")[-1]
+        else:
+            int_atom = str(analyser.topology.atom(row["d_orig_idx"]-1)).split("-")[-1]
+        if (int_atom, row["restype"]+str(row["resnr"])+"_"+row["reschain"],"HB") not in interactions:
+            interactions.append((int_atom, row["restype"]+str(row["resnr"])+"_"+row["reschain"],"HB"))
+
+    for df, int_type in zip([analyser.pi_stacking.pi_stacking_df,analyser.pi_cation.pi_cation_df,analyser.saltbridge.saltbridge_df],
+                                    ["PS","PC","SB"]):
+        for i,row in df.drop_duplicates(subset=["LIG_IDX_LIST","RESTYPE","RESNR","RESCHAIN"]).iterrows():
+            if row["fpresent"] < plot_thresh:
+                continue
+            com = np.stack([coord_dict[str(analyser.topology.atom(x-1)).split("-")[-1]] for x in np.array(row["LIG_IDX_LIST"].split(","), dtype=int)]).mean(axis=0)
+            if (com[0],com[1],"centroid","centroid_{}".format(i)) not in centroids:
+                centroids.append((com[0],com[1],"centroid","centroid_{}".format(centroid_counter)))
+                coord_dict["centroid_{}".format(centroid_counter)] = (com[0],com[1])
+                centroid_counter += 1
+                interactions.append(("centroid_{}".format(centroid_counter-1), row["RESTYPE"]+str(row["RESNR"])+"_"+row["RESCHAIN"],int_type))
+            else:
+                centroid_index = centroids.index((com[0],com[1],"centroid","centroid_{}".format(i)))
+                interactions.append(("centroid_{}".format(centroid_index), row["RESTYPE"]+str(row["RESNR"])+"_"+row["RESCHAIN"],int_type))
+
+    used_res = np.unique(np.array([x[1] for x in interactions]))
+    return interactions, centroids, used_res
+
+def _get_res_info(used_res, coord_dict, interactions):
     '''
-    Draws a molecular interaction graph from MD analysis using the Canvas drawing package.
-    If save_png, outputs the file as a png. If running in a jupyter notebook, the image is shown.
+    Greedy label placement algorithm.
+    Calculates number of overlaps in a grid of candidate positions.
+    Returns a solution with fewest overlaps.
     '''
+    res_info = []
+    _coord_temp = np.array([np.array(coord_dict[key]) for key in coord_dict.keys()])
+    for i,res in enumerate(used_res):
+        res_ints = [x[0] for x in interactions if x[1] == res]
+        initial_lab_coords = np.array([coord_dict[x] for x in res_ints]).mean(axis=0)
+        candidates = (np.mgrid[-2.5:2.6:0.1, -2.5:2.6:0.1].reshape(2,-1).T) + initial_lab_coords
 
-    if canvas_height <= 800:
-        sgl_witdh = 2
-        dbl_width = 6
+        overlaps = []
+        for cand in candidates:
+            overlap_count = 0
+            for coord in _coord_temp:
+                if np.abs(cand-coord)[0] < 2 and np.abs(cand-coord)[1] < 2:
+                    overlap_count += 1
+            for coord in [(x[0],x[1]) for x in res_info]:
+                if np.abs(cand-coord)[0] < 2 and np.abs(cand-coord)[1] < 2:
+                    overlap_count += 1
 
-    else:
-        sgl_witdh = 3
-        dbl_width = 8
+            overlaps.append(overlap_count)
 
+        lab_coords = candidates[np.argmin(overlaps)]
 
+        coord_dict[res] = (lab_coords[0],lab_coords[1])
+        res_info.append((lab_coords[0],lab_coords[1],"residue",res))
+
+    return res_info
+
+def _get_atom_info(analyser):
     ##### Outputs the ligand from trajectory. Uses openbabel to assign atom types then passes to RDKit to generate 2D coords ####
     with tempfile.TemporaryDirectory() as temp_dir:
         pdb_file_path = os.path.join(temp_dir, "lig.pdb")
 
-        self.t.atom_slice(self.topology.select("resname {}".format(self.bsid.split(":")[0])))[0].save_pdb(pdb_file_path)
+        analyser.t.atom_slice(analyser.topology.select("resname {}".format(analyser.bsid.split(":")[0])))[0].save_pdb(pdb_file_path)
 
         mol = [x for x in pybel.readfile("pdb",pdb_file_path)][0]
         mol.write("pdb",pdb_file_path, overwrite=True)
@@ -367,9 +424,9 @@ def draw_interaction_Graph(self, plot_thresh=0, canvas_height=800, canvas_width=
         atom_info.append((coords.x, coords.y, atom.GetSymbol(), atom.GetPDBResidueInfo().GetName().strip()))
 
         if atom.GetFormalCharge() < 0:
-            charge_info.append((coords.x+0.5, coords.y-0.3, "–", "Charge"))
+            charge_info.append((coords.x+0.3, coords.y-0.2, "–", "Charge"))
         if atom.GetFormalCharge() > 0:
-            charge_info.append((coords.x+0.5, coords.y-0.3, "+", "Charge"))
+            charge_info.append((coords.x+0.3, coords.y-0.2, "+", "Charge"))
             
         startatoms = [bond.GetBeginAtomIdx() for bond in atom.GetBonds()]
         endatoms = [bond.GetEndAtomIdx() for bond in atom.GetBonds()]
@@ -382,94 +439,23 @@ def draw_interaction_Graph(self, plot_thresh=0, canvas_height=800, canvas_width=
     coord_dict = {}
     for entry in atom_info:
         coord_dict[entry[3]] = (entry[0],entry[1])
-
-    interactions = []
-    centroids = []
-    centroid_counter = 0
-
-    for i,row in self.hydrophobic.hydrophobic_df.drop_duplicates(subset=["LIGCARBONIDX","RESTYPE","RESNR","RESCHAIN"]).iterrows():
-        if row["fpresent"] < plot_thresh:
-            continue
-        int_atom = str(self.topology.atom(row["LIGCARBONIDX"]-1)).split("-")[-1]
-        interactions.append((int_atom, row["RESTYPE"]+str(row["RESNR"])+"_"+row["RESCHAIN"], "HPI"))#, presence_df[int_name]))
-
-    for i,row in self.hbond.hbond_df.iterrows():
-        if row["fpresent"] < plot_thresh:
-            continue
-        if row["protisdon"]:
-            int_atom = str(self.topology.atom(row["a_orig_idx"]-1)).split("-")[-1]
-        else:
-            int_atom = str(self.topology.atom(row["d_orig_idx"]-1)).split("-")[-1]
-        if (int_atom, row["restype"]+str(row["resnr"])+"_"+row["reschain"],"HB") not in interactions:
-            interactions.append((int_atom, row["restype"]+str(row["resnr"])+"_"+row["reschain"],"HB"))
-
-    for df, int_type in zip([self.pi_stacking.pi_stacking_df,self.pi_cation.pi_cation_df,self.saltbridge.saltbridge_df],
-                                    ["PS","PC","SB"]):
-        for i,row in df.drop_duplicates(subset=["LIG_IDX_LIST","RESTYPE","RESNR","RESCHAIN"]).iterrows():
-            if row["fpresent"] < plot_thresh:
-                continue
-            com = np.stack([coord_dict[str(self.topology.atom(x-1)).split("-")[-1]] for x in np.array(row["LIG_IDX_LIST"].split(","), dtype=int)]).mean(axis=0)
-            if (com[0],com[1],"centroid","centroid_{}".format(i)) not in centroids:
-                centroids.append((com[0],com[1],"centroid","centroid_{}".format(centroid_counter)))
-                coord_dict["centroid_{}".format(centroid_counter)] = (com[0],com[1])
-                centroid_counter += 1
-                interactions.append(("centroid_{}".format(centroid_counter-1), row["RESTYPE"]+str(row["RESNR"])+"_"+row["RESCHAIN"],int_type))
-            else:
-                centroid_index = centroids.index((com[0],com[1],"centroid","centroid_{}".format(i)))
-                interactions.append(("centroid_{}".format(centroid_index), row["RESTYPE"]+str(row["RESNR"])+"_"+row["RESCHAIN"],int_type))
-
-    used_res = np.unique(np.array([x[1] for x in interactions]))
-
-    max_x = max([coord_dict[x][0] for x in coord_dict.keys()])
-    min_x = min([coord_dict[x][0] for x in coord_dict.keys()])
-    max_y = max([coord_dict[x][1] for x in coord_dict.keys()])
-    min_y = min([coord_dict[x][1] for x in coord_dict.keys()])
-    x_center = np.mean([coord_dict[x][0] for x in coord_dict.keys()])
-    y_center = np.mean([coord_dict[x][1] for x in coord_dict.keys()])
-
-    res_info = []
-    for res in used_res:
-        res_ints = [x[0] for x in interactions if x[1] == res]
-        lab_coords = np.array([coord_dict[x] for x in res_ints]).mean(axis=0)
-
-        dists = np.sqrt(((np.array([np.array(coord_dict[key]) for key in coord_dict.keys()])-lab_coords)**2).sum(axis=1))
-        min_dist = min(dists)
-        while True:
-            if min_dist != 0:
-                mod_vec = lab_coords - coord_dict[list(coord_dict.keys())[np.argmin(dists)]]
-                mod_vec = (mod_vec/np.linalg.norm(mod_vec)) + (np.random.randn(1,2)/100).ravel()  ####  normalise vector to move away from closest point. Add random factors to avoid getting caught in a loop
-            else:
-                min2 = np.partition(dists, 2)[2]
-                new_argmin = np.where(dists == min2)[0][0]
-                mod_vec = lab_coords - coord_dict[list(coord_dict.keys())[new_argmin]]
-                mod_vec = (mod_vec/np.linalg.norm(mod_vec)) + (np.random.randn(1,2)/100).ravel() ####  normalise vector to move away from closest point. Add random factors to avoid getting caught in a loop
-                
-            lab_coords = lab_coords + mod_vec
-            dists = np.sqrt(((np.array([np.array(coord_dict[key]) for key in coord_dict.keys()])-lab_coords)**2).sum(axis=1))
-            min_dist = min(dists)
-
-            if min_dist >= 1.5:
-                break
-        coord_dict[res] = (lab_coords[0],lab_coords[1])
-        res_info.append((lab_coords[0],lab_coords[1],"residue",res))
+    
+    return coord_dict, atom_info, charge_info, bonds
 
 
-    atom_info = atom_info + centroids
-    lines = []
-    for i in range(len(res_info)):
-        res = res_info[i][3]
-        for j in range(len(interactions)):
-            if interactions[j][1] == res:
-                atom = interactions[j][0]
-                atom_index = [x[3] for x in atom_info].index(atom)
-                lines.append((i+len(atom_info), atom_index, interactions[j][2]))
-
-    atom_info = atom_info + res_info + charge_info
-
-    connections = bonds + lines
-
+def _draw_mol(atom_info, connections, padding, canvas_height, canvas_width, out_name):
     # Define padding
-    padding = 40
+    padding = padding
+
+    if canvas_height <= 800:
+        sgl_witdh = 2
+        dbl_width = 6
+        font_weight = 12
+
+    else:
+        sgl_witdh = 3
+        dbl_width = 8
+        font_weight = 15
 
     color_dict = {"O":(1, 0, 0),
                     "N":(0,0,1.0),
@@ -479,7 +465,7 @@ def draw_interaction_Graph(self, plot_thresh=0, canvas_height=800, canvas_width=
 
     # Set canvas size including padding
     # canvas_width, canvas_height = canvas_height + 2 * padding, 800 + 2 * padding
-    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, canvas_width, canvas_height)
+    surface = cairo.SVGSurface(out_name, canvas_width, canvas_height)
     ctx = cairo.Context(surface)
 
     # Set background color
@@ -581,7 +567,7 @@ def draw_interaction_Graph(self, plot_thresh=0, canvas_height=800, canvas_width=
             ctx.set_source_rgba(0.5,0.5,0.5, 0.7)  
             ctx.set_line_width(3) 
             ctx.set_dash([10, 5], 0)  
-            ctx.move_to(start_x+jitter, start_y)
+            ctx.move_to(start_x, start_y)
             ctx.line_to(end_x, end_y)
             ctx.stroke()
             ctx.set_line_width(0)
@@ -589,7 +575,7 @@ def draw_interaction_Graph(self, plot_thresh=0, canvas_height=800, canvas_width=
             ctx.set_source_rgba(0, 0, 1, 0.7)  
             ctx.set_line_width(3) 
             ctx.set_dash([10, 5], 0) 
-            ctx.move_to(start_x+jitter, start_y)
+            ctx.move_to(start_x+7, start_y)
             ctx.line_to(end_x, end_y)
             ctx.stroke()
             ctx.set_line_width(0)
@@ -597,7 +583,7 @@ def draw_interaction_Graph(self, plot_thresh=0, canvas_height=800, canvas_width=
             ctx.set_source_rgba(0, 0.6, 0, 0.7)  
             ctx.set_line_width(3) 
             ctx.set_dash([10, 5], 0)  
-            ctx.move_to(start_x+jitter, start_y)
+            ctx.move_to(start_x+15, start_y)
             ctx.line_to(end_x, end_y)
             ctx.stroke()
             ctx.set_line_width(0)
@@ -605,7 +591,7 @@ def draw_interaction_Graph(self, plot_thresh=0, canvas_height=800, canvas_width=
             ctx.set_source_rgba(1, 0.7, 0, 0.7)  
             ctx.set_line_width(3) 
             ctx.set_dash([10, 5], 0)  
-            ctx.move_to(start_x+jitter, start_y)
+            ctx.move_to(start_x-15, start_y)
             ctx.line_to(end_x, end_y)
             ctx.stroke()
             ctx.set_line_width(0)
@@ -613,12 +599,10 @@ def draw_interaction_Graph(self, plot_thresh=0, canvas_height=800, canvas_width=
             ctx.set_source_rgba(1, 0, 1, 0.7)  
             ctx.set_line_width(3) 
             ctx.set_dash([10, 5], 0)  
-            ctx.move_to(start_x+jitter, start_y)
+            ctx.move_to(start_x-7, start_y)
             ctx.line_to(end_x, end_y)
             ctx.stroke()
             ctx.set_line_width(0)
-
-
 
     # Draw filled circles and labels with padding
     for x, y, label, res in data_points:
@@ -627,13 +611,18 @@ def draw_interaction_Graph(self, plot_thresh=0, canvas_height=800, canvas_width=
 
         # Draw a filled white circle at each data point
         ctx.set_source_rgb(1, 1, 1)  
-        ctx.arc((x - min_x) * x_scale + padding + mod_x, (y - min_y) * y_scale + padding + mod_y, 10, 0, 2 * 3.14)
+        if res == "Charge":
+            ctx.arc((x - min_x) * x_scale + padding + mod_x, (y - min_y) * y_scale + padding + mod_y, 5, 0, 2 * 3.14)
+        elif label == "residue":
+            ctx.arc((x - min_x) * x_scale + padding + mod_x, (y - min_y) * y_scale + padding + mod_y, 0, 0, 2 * 3.14)
+        else:
+            ctx.arc((x - min_x) * x_scale + padding + mod_x, (y - min_y) * y_scale + padding + mod_y, 10, 0, 2 * 3.14)
         ctx.fill_preserve()  
         ctx.stroke()
             
         # Set font settings
         ctx.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
-        ctx.set_font_size(15)
+        ctx.set_font_size(font_weight)
 
         # Calculate text width and height
         text_extents = ctx.text_extents(res if label == "residue" else label)
@@ -661,55 +650,100 @@ def draw_interaction_Graph(self, plot_thresh=0, canvas_height=800, canvas_width=
         ctx.text_path(res if label == "residue" else label)
         ctx.fill()
 
+    return ctx, surface
 
-    # Define legend items
-    legend_items = [
-        ("Hydrophobic", (0.5,0.5,0.5)),
-        ("H-bond", (0, 0, 1)),
-        ("Pi-Stacking", (0,0.6,0)),
-        ("Pi-cation", (1,0.7,0)),
-        ("Salt-bridge", (1,0,1)),
-    ]
+def draw_interaction_Graph(analyser, plot_thresh=0, canvas_height=800, canvas_width=1000,  padding=40, save_files = False, out_name="interactions_2d.png", legend=True):
+    '''
+    Draws a molecular interaction graph from MD analysis using the Canvas drawing package.
+    If save_png, outputs the file as a png. If running in a jupyter notebook, the image is shown.
+    '''
+
+    if save_files == False:
+        out_name = None
+
+    coord_dict, atom_info, charge_info, bonds = _get_atom_info(analyser)
+
+    interactions, centroids, used_res = _get_interactions(analyser, plot_thresh, coord_dict)
+
+    res_info = _get_res_info(used_res,coord_dict, interactions)
 
 
-    # Calculate legend size
-    legend_width = np.sum([40+len(x[0])*9 for x in legend_items])
-    legend_height = 20
-    legend_x, legend_y = (canvas_width - legend_width)/2 , canvas_height - padding/3
+    atom_info = atom_info + centroids
+    lines = []
+    for i in range(len(res_info)):
+        res = res_info[i][3]
+        for j in range(len(interactions)):
+            if interactions[j][1] == res:
+                atom = interactions[j][0]
+                atom_index = [x[3] for x in atom_info].index(atom)
+                lines.append((i+len(atom_info), atom_index, interactions[j][2]))
 
-    # Draw legend rectangle
-    ctx.set_source_rgb(0,0,0)  # Black color
-    ctx.set_line_width(2)
-    ctx.set_dash([], 0)  # Set dash pattern for aromatic bond
+    atom_info = atom_info + res_info + charge_info
 
-    ctx.rectangle(legend_x-5, legend_y - legend_height + 10, legend_width, legend_height)
-    ctx.stroke_preserve()
-    ctx.set_source_rgb(1,1,1)
-    ctx.fill()
+    connections = bonds + lines
 
-    # Draw legend items
-    for label, color in legend_items:
+    ctx, surface = _draw_mol(atom_info, connections, padding, canvas_height, canvas_width, out_name)
+
+
+    if legend:
+
+        if canvas_height <= 800:
+            legend_scale = 7
+        else:
+            legend_scale = 9
+
+        # Define legend items
+        legend_items = [
+            ("Hydrophobic", (0.5,0.5,0.5)),
+            ("H-bond", (0, 0, 1)),
+            ("Pi-Stacking", (0,0.6,0)),
+            ("Pi-cation", (1,0.7,0)),
+            ("Salt-bridge", (1,0,1)),
+        ]
+
+        # Calculate legend size
+        legend_width = np.sum([40+len(x[0])*legend_scale for x in legend_items])
+        legend_height = 20
+        legend_x, legend_y = (canvas_width - legend_width)/2 , canvas_height - padding/3
+
+        # Draw legend rectangle
+        ctx.set_source_rgb(0,0,0)  # Black color
         ctx.set_line_width(2)
-        ctx.set_source_rgba(color[0], color[1], color[2],0.8)  
-        ctx.set_dash([10, 5], 0)  
+        ctx.set_dash([], 0)  # Set dash pattern for aromatic bond
+
+        ctx.rectangle(legend_x-5, legend_y - legend_height + 10, legend_width, legend_height)
+        ctx.stroke_preserve()
+        ctx.set_source_rgb(1,1,1)
+        ctx.fill()
+
+        # Draw legend items
+        for label, color in legend_items:
+            ctx.set_line_width(2)
+            ctx.set_source_rgba(color[0], color[1], color[2],0.8)  
+            ctx.set_dash([10, 5], 0)  
 
 
-        # Draw legend line
-        ctx.move_to(legend_x, legend_y)
-        ctx.line_to(legend_x + 30, legend_y)
-        ctx.stroke()
+            # Draw legend line
+            ctx.move_to(legend_x, legend_y)
+            ctx.line_to(legend_x + 30, legend_y)
+            ctx.stroke()
 
-        # Draw legend label
-        ctx.set_source_rgb(0, 0, 0)
-        ctx.move_to(legend_x + 40, legend_y + 5)
-        ctx.show_text(label)
+            # Draw legend label
+            ctx.set_source_rgb(0, 0, 0)
+            ctx.move_to(legend_x + 40, legend_y + 5)
+            ctx.show_text(label)
 
-        # Move down for the next legend item
-        legend_x += 40+len(label)*9
+            # Move along for the next legend item
+            legend_x += 40+len(label)*legend_scale
 
     # Save the image to a file
-    if save_png:
-        surface.write_to_png(out_name)
+    if save_files:
+        if out_name.lower().endswith(".png"):
+            surface.write_to_png(out_name)
+        elif out_name.lower().endswith(".svg"):
+            surface.finish()
+        else:
+            raise
     else:
         try:
             from IPython.display import display, Image

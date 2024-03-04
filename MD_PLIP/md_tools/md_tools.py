@@ -17,6 +17,7 @@ config.NOHYDRO = True
 config.DEFAULT_LOG_LEVEL = logging.ERROR
 
 ### Loosen detection thresholds to detect more interactions
+### 
 config.PISTACK_OFFSET_MAX = 4.0
 config.PISTACK_ANG_DEV = 45
 config.HBOND_DIST_MAX = 5.0
@@ -50,6 +51,8 @@ hbkeys = [
 
 plip_cutoffs = {"HB_dist_max":0.41,
                 "HB_ang_min":100,
+                "HB_dist_max_plotting":0.25,
+                "HB_ang_min_plotting":120,
                 "PS_dist_max":0.55,
                 "PS_offset_max":0.2,
                 "PC_dist_max":0.6,
@@ -59,6 +62,8 @@ plip_cutoffs = {"HB_dist_max":0.41,
 
 prolif_cutoffs = {"HB_dist_max":0.35,
                 "HB_ang_min":130,
+                "HB_dist_max_plotting":0.25,
+                "HB_ang_min_plotting":120,
                 "PS_dist_max":0.65,
                 "PS_offset_max":0.65,
                 "PC_dist_max":0.45,
@@ -221,7 +226,7 @@ class analysis():
     bsid = None
     dirname = None
 
-    def __init__(self, t, topology, sample_dir="clusters"):
+    def __init__(self, t, topology, sample_dir="clusters", cutoffs="PLIP"):
         """
         Initialize an instance of the Analysis class.
 
@@ -229,7 +234,19 @@ class analysis():
         - t (mdtraj.core.trajectory.Trajectory): Mdtraj trajectory object.
         - topology (mdtraj.core.topology.Topology): Mdtraj topology object - must correspond to the trajectory object.
         - sample_dir (str, optional): Description of the parameter. Defaults to "clusters".
+        - cutoffs (str, optional): must belong to "PLIP" or "PROLIF". Defines interaction cutoffs for detection of interactions. More information given in [REFERENCES]. Defaults to "PLIP".
         """
+        if cutoffs == "PLIP":
+            self.cutoffs = plip_cutoffs
+        elif cutoffs == "PROLIF":
+            self.cutoffs = prolif_cutoffs
+            config.PICATION_DIST_MAX = 4.5
+            config.PISTACK_DIST_MAX = 6.5
+            config.PISTACK_OFFSET_MAX = 100
+            config.SALTBRIDGE_DIST_MAX = 4.5
+            config.HBOND_DIST_MAX = 3.5
+            config.HBOND_DON_ANGLE_MIN = 130
+            config.HYDROPH_DIST_MAX = 4.5
 
         self.t = t
         self.topology = topology
@@ -246,7 +263,7 @@ class analysis():
         self.pi_cation = self.PiCation()
         self.saltbridge = self.Saltbridge()
 
-    def analyse_bsid(self, bsid, save_files=True, pymol=True, cutoffs="PLIP"):
+    def analyse_bsid(self, bsid, save_files=True, pymol=True):
         """
         Perform analysis of the chosen binding site and generate interaction distances. Populates interaction subclasses of the Analysis Class.
 
@@ -254,19 +271,7 @@ class analysis():
         - bsid (str): Binding site to perform PLIP analysis on to generate interactions.
         - save_files (bool, optional): Save distances and analysis data. Defaults to True.
         - pymol (bool, optional): If save_files is True, also saves pymol session files for each analysed sample. Can lengthen analysis time for a large number of samples. Defaults to True
-        - cutoffs (str, optional): must belong to "PLIP" or "PROLIF". Defines interaction cutoffs for detection of interactions. More information given in [REFERENCES]. Defaults to "PLIP".
         """
-        if cutoffs == "PLIP":
-            cutoffs = plip_cutoffs
-        elif cutoffs == "PROLIF":
-            cutoffs = prolif_cutoffs
-            config.PICATION_DIST_MAX = 4.5
-            config.PISTACK_DIST_MAX = 6.5
-            config.PISTACK_OFFSET_MAX = 100
-            config.SALTBRIDGE_DIST_MAX = 4.5
-            config.HBOND_DIST_MAX = 3.5
-            config.HBOND_DON_ANGLE_MIN = 130
-            config.HYDROPH_DIST_MAX = 4.5
 
         dirname = "_".join(bsid.split(":"))
 
@@ -326,7 +331,7 @@ class analysis():
                 columns += [str(self.topology.atom(row[1]["LIGCARBONIDX"]-1))+"_"+str(self.topology.atom(row[1]["PROTCARBONIDX"]-1))]
 
             self.hydrophobic.hp_dists = pd.DataFrame(md.compute_distances(self.t,self.hydrophobic.hydrophobic_df[["LIGCARBONIDX","PROTCARBONIDX"]].to_numpy()-1), columns=columns)
-            self.hydrophobic.hp_presence = (self.hydrophobic.hp_dists < cutoffs["HP_dist_max"])
+            self.hydrophobic.hp_presence = (self.hydrophobic.hp_dists < self.cutoffs["HP_dist_max"])
             self.hydrophobic.hydrophobic_df["fpresent"] = (self.hydrophobic.hp_presence.sum(axis=0)/len(self.hydrophobic.hp_presence)).round(3).values
             self.hydrophobic.hydrophobic_df=self.hydrophobic.hydrophobic_df.sort_values("fpresent", ascending=False).reset_index(drop=True)
             columns = pd.DataFrame(self.hydrophobic.hp_presence.sum()).sort_values(0, ascending=False).index
@@ -345,7 +350,7 @@ class analysis():
 
             self.hbond.hb_dists = pd.DataFrame(md.compute_distances(self.t,self.hbond.hbond_df[["a_orig_idx","h"]].to_numpy()-1), columns=columns)
             self.hbond.hb_angles = pd.DataFrame(np.degrees(md.compute_angles(self.t,self.hbond.hbond_df[["a_orig_idx","h","d_orig_idx"]].to_numpy()-1)), columns=columns)
-            self.hbond.hb_presence = (self.hbond.hb_dists < cutoffs["HB_dist_max"]) & (self.hbond.hb_angles > cutoffs["HB_ang_min"])
+            self.hbond.hb_presence = (self.hbond.hb_dists < self.cutoffs["HB_dist_max_plotting"]) & (self.hbond.hb_angles > self.cutoffs["HB_ang_min_plotting"])
             self.hbond.hbond_df["fpresent"] = (self.hbond.hb_presence.sum(axis=0)/len(self.hbond.hb_presence)).round(3).values
             self.hbond.hbond_df=self.hbond.hbond_df.sort_values("fpresent", ascending=False).reset_index(drop=True)
             columns = pd.DataFrame(self.hbond.hb_presence.sum()).sort_values(0, ascending=False).index
@@ -391,7 +396,7 @@ class analysis():
             self.pi_stacking.ps_dists = pd.DataFrame(ps_dists, index=columns).T
             self.pi_stacking.ps_angles = pd.DataFrame(ps_angles, index=columns).T
             self.pi_stacking.ps_offset = pd.DataFrame(ps_offset, index=columns).T
-            self.pi_stacking.ps_presence = (self.pi_stacking.ps_dists < cutoffs["PS_dist_max"]) & (self.pi_stacking.ps_offset < cutoffs["PS_offset_max"])
+            self.pi_stacking.ps_presence = (self.pi_stacking.ps_dists < self.cutoffs["PS_dist_max"]) & (self.pi_stacking.ps_offset < self.cutoffs["PS_offset_max"])
             self.pi_stacking.pi_stacking_df["fpresent"] = (self.pi_stacking.ps_presence.sum(axis=0)/len(self.pi_stacking.ps_presence)).round(3).values
             self.pi_stacking.pi_stacking_df=self.pi_stacking.pi_stacking_df.sort_values("fpresent", ascending=False).reset_index(drop=True)
             columns = pd.DataFrame(self.pi_stacking.ps_presence.sum()).sort_values(0, ascending=False).index
@@ -421,7 +426,7 @@ class analysis():
                 pc_dists += [np.array([euclidean(tup[0],tup[1]) for tup in zip(PROT_COM,LIG_COM)])]
 
             self.pi_cation.pc_dists = pd.DataFrame(pc_dists, index=columns).T
-            self.pi_cation.pc_presence = (self.pi_cation.pc_dists < cutoffs["PC_dist_max"])
+            self.pi_cation.pc_presence = (self.pi_cation.pc_dists < self.cutoffs["PC_dist_max"])
             self.pi_cation.pi_cation_df["fpresent"] = (self.pi_cation.pc_presence.sum(axis=0)/len(self.pi_cation.pc_presence)).round(3).values
             self.pi_cation.pi_cation_df=self.pi_cation.pi_cation_df.sort_values("fpresent", ascending=False).reset_index(drop=True)
             columns = pd.DataFrame(self.pi_cation.pc_presence.sum()).sort_values(0, ascending=False).index
@@ -447,7 +452,7 @@ class analysis():
                 sb_dists += [np.array([euclidean(tup[0],tup[1]) for tup in zip(PROT_COM,LIG_COM)])]
 
             self.saltbridge.sb_dists = pd.DataFrame(sb_dists, index=columns).T
-            self.saltbridge.sb_presence = (self.saltbridge.sb_dists < cutoffs["SB_dist_max"])
+            self.saltbridge.sb_presence = (self.saltbridge.sb_dists < self.cutoffs["SB_dist_max"])
             self.saltbridge.saltbridge_df["fpresent"] = (self.saltbridge.sb_presence.sum(axis=0)/len(self.saltbridge.sb_presence)).round(3).values
             self.saltbridge.saltbridge_df=self.saltbridge.saltbridge_df.sort_values("fpresent", ascending=False).reset_index(drop=True)
             columns = pd.DataFrame(self.saltbridge.sb_presence.sum()).sort_values(0, ascending=False).index
@@ -480,7 +485,7 @@ class analysis():
             if not os.path.isdir(outpath):
                 os.mkdir(outpath)
         
-        plot_HB(self.hbond.hb_dists, self.hbond.hb_angles, self.dirname, plot_thresh, save_files)
+        plot_HB(self.hbond.hb_dists, self.hbond.hb_angles, self.dirname, plot_thresh, save_files, HB_dist_max= self.cutoffs["HB_dist_max_plotting"], HB_ang_min= self.cutoffs["HB_ang_min_plotting"])
                             
     def plot_PS(self, plot_thresh, save_files=True):
         if self.pi_stacking.ps_dists is None:
@@ -492,7 +497,7 @@ class analysis():
             if not os.path.isdir(outpath):
                 os.mkdir(outpath)
         
-        plot_PS(self.pi_stacking.ps_dists, self.pi_stacking.ps_offset, self.pi_stacking.ps_angles, self.dirname, plot_thresh,  save_files)
+        plot_PS(self.pi_stacking.ps_dists, self.pi_stacking.ps_offset, self.pi_stacking.ps_angles, self.dirname, plot_thresh, save_files, PS_dist_max= self.cutoffs["PS_dist_max"], PS_offset_max= self.cutoffs["PS_offset_max"])
 
     def plot_PC(self, plot_thresh, save_files=True):
         if self.pi_cation.pc_dists is None:
@@ -504,7 +509,7 @@ class analysis():
             if not os.path.isdir(outpath):
                 os.mkdir(outpath)
         
-        plot_PC(self.pi_cation.pc_dists, self.dirname, plot_thresh,  save_files)
+        plot_PC(self.pi_cation.pc_dists, self.dirname, plot_thresh,  save_files, PC_dist_max= self.cutoffs["PC_dist_max"])
 
     def plot_SB(self, plot_thresh, save_files=True):
         if self.saltbridge.sb_dists is None:
@@ -516,7 +521,7 @@ class analysis():
             if not os.path.isdir(outpath):
                 os.mkdir(outpath)
         
-        plot_SB(self.saltbridge.sb_dists, self.dirname, plot_thresh,  save_files)
+        plot_SB(self.saltbridge.sb_dists, self.dirname, plot_thresh,  save_files, SB_dist_max= self.cutoffs["SB_dist_max"])
 
     def plot_interaction_presence(self, plot_thresh=0.3, figsize=(6,8), save_files=True):
         if save_files:
@@ -631,13 +636,13 @@ class analysis():
                 sb_df.to_csv("./{}/{}_sb.csv".format(outpath,filename), index=False)
         return rep_frame    
     
-    def plot_2D_interactions(self, plot_thresh=0.2, canvas_height=500, canvas_width=800, padding=40, save_png=False, out_name=None):
+    def plot_2D_interactions(self, plot_thresh=0.2, canvas_height=500, canvas_width=800, padding=40, save_files=False, out_name=None):
 
-        if save_png:
+        if save_files:
             if not os.path.isdir(self.dirname):
                 os.mkdir(self.dirname)     
             if not os.path.isdir(self.dirname+"/plots"):
                 os.mkdir(self.dirname+"/plots")         
     
-        draw_interaction_Graph(self, plot_thresh, canvas_height, canvas_width, padding, save_png, out_name=self.dirname+"/plots/{}".format(out_name))
+        draw_interaction_Graph(self, plot_thresh, canvas_height, canvas_width, padding, save_files, out_name=self.dirname+"/plots/{}".format(out_name))
         

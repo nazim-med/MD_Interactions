@@ -49,34 +49,33 @@ def rm_model_tag(top):
 #         else:
 #             res = res.OBResidue.SetChainNum(chain_num)
 #     mol.write("pdb","./{}.pdb".format(filename), overwrite=True)
-
+        
 def add_chains(top):
-    with open(top,"r") as f:
+    with open(top, "r") as f:
         pdb = f.readlines()
 
     alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
     chain_num = 0
-    for i,line in enumerate(pdb):
-        if line.find("ATOM") != -1 or line.find("HETATM") != -1:
-            if pdb[i-1].find("ATOM") != -1 or pdb[i-1].find("HETATM") != -1:
-                if int(line[22:26]) < int(pdb[i-1][22:26]):
-                    chain_num += 1
-                    pdb[i] = pdb[i][:21]+alphabet[chain_num]+pdb[i][22:]
-                else:
-                    pdb[i] = pdb[i][:21]+alphabet[chain_num]+pdb[i][22:]
-            else:
-                pdb[i] = pdb[i][:21]+alphabet[chain_num]+pdb[i][22:]
-        else:
-            continue
+    i = 0
 
-    #### Deal with Amber Protonated Residue Names Otherwise PLIP does not detect interactions
-        if line[17:20] in prot_dict.keys():
-            pdb[i] = pdb[i][:17]+prot_dict[line[17:20]]+pdb[i][20:]
+    while i < len(pdb):
+        if "TER" in pdb[i]:  # Check if "TER" is in the line
+            pdb.pop(i) # Remove - sometimes causes issues with PLIP (maybe atom numbering?). Openbabel removes TER anyway. 
+        elif pdb[i].startswith(("ATOM", "HETATM")):  # Is line an atom?
+            if i > 0 and pdb[i-1].startswith(("ATOM", "HETATM")):
+                if int(pdb[i][22:26]) < int(pdb[i-1][22:26]):
+                    chain_num += 1
+            pdb[i] = pdb[i][:21] + alphabet[chain_num] + pdb[i][22:]
+            # Deal with Amber Protonated Residue Names
+            residue_code = pdb[i][17:20]
+            if residue_code in prot_dict:
+                pdb[i] = pdb[i][:17] + prot_dict[residue_code] + pdb[i][20:]
+            i += 1
+        else:
+            i += 1
 
     with open(top, "w") as f:
-        for line in pdb:
-            f.writelines(line)
+        f.writelines(pdb)
 
 
 def analyse_pi(plane_1, plane_2):
