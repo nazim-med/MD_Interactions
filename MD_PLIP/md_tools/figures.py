@@ -465,7 +465,15 @@ def _draw_mol(atom_info, connections, padding, canvas_height, canvas_width, out_
 
     # Set canvas size including padding
     # canvas_width, canvas_height = canvas_height + 2 * padding, 800 + 2 * padding
-    surface = cairo.SVGSurface(out_name, canvas_width, canvas_height)
+
+    if out_name is None:
+        surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, canvas_width, canvas_height)
+    else:
+        if out_name.lower().endswith(".svg"):
+            surface = cairo.SVGSurface(out_name, canvas_width, canvas_height)
+        else:
+            surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, canvas_width, canvas_height)
+
     ctx = cairo.Context(surface)
 
     # Set background color
@@ -743,7 +751,7 @@ def draw_interaction_Graph(analyser, plot_thresh=0, canvas_height=800, canvas_wi
         elif out_name.lower().endswith(".svg"):
             surface.finish()
         else:
-            raise
+            raise ValueError("Unsupported file format. Please provide either PNG or SVG extension.")
     else:
         try:
             from IPython.display import display, Image

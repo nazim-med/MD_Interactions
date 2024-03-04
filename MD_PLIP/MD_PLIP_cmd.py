@@ -106,7 +106,7 @@ def main():
             analyser.plot_PC(plot_thresh=args.plot_thresh, save_files=True)
             analyser.plot_SB(plot_thresh=args.plot_thresh, save_files=True)
             analyser.plot_interaction_presence(plot_thresh=args.plot_thresh, save_files=True)
-            analyser.plot_2D_interactions(plot_thresh=args.plot_thresh, save_png=True, out_name="{}_interactions.png".format(my_id.split(":")[0]))
+            analyser.plot_2D_interactions(plot_thresh=args.plot_thresh, save_files=True, out_name="{}_interactions.png".format(my_id.split(":")[0]))
             analyser.traj_ifp(save_files=True, thresh=args.plot_thresh, fraction=True)
             analyser.representative_frame(thresh=0.3, pymol=True, save_files=True, metric="tanimoto")
 
