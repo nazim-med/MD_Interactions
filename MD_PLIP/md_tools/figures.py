@@ -389,7 +389,7 @@ def _get_atom_info(analyser):
     with tempfile.TemporaryDirectory() as temp_dir:
         pdb_file_path = os.path.join(temp_dir, "lig.pdb")
 
-        analyser.t.atom_slice(analyser.topology.select("resname {}".format(analyser.bsid.split(":")[0])))[0].save_pdb(pdb_file_path)
+        analyser.t.atom_slice(analyser.topology.select("resname =~ '^{}'".format(analyser.bsid.split(":")[0])))[0].save_pdb(pdb_file_path)
 
         mol = [x for x in pybel.readfile("pdb",pdb_file_path)][0]
         mol.write("pdb",pdb_file_path, overwrite=True)

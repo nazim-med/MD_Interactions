@@ -51,10 +51,10 @@ hbkeys = [
 
 plip_cutoffs = {"HB_dist_max":0.41,
                 "HB_ang_min":100,
-                "HB_dist_max_plotting":0.25,
-                "HB_ang_min_plotting":120,
+                "HB_dist_max_plotting":0.41,
+                "HB_ang_min_plotting":100,
                 "PS_dist_max":0.55,
-                "PS_offset_max":0.2,
+                "PS_offset_max":0.25,
                 "PC_dist_max":0.6,
                 "SB_dist_max":0.55,
                 "HP_dist_max":0.4,
