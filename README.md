@@ -20,7 +20,7 @@ conda create -n MD_PLIP -c conda-forge openbabel plip pymol-open-source matplotl
 ```
 2. Clone this repo
 ```
-git clone https://github.com/cmwoodley/MD_PLIP.git
+git clone https://github.com/nazim-med/MD_Interactions.git
 ```
 3. Install md_plip (tested on windows and Ubuntu on WSL2)
 ```
